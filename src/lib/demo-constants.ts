@@ -42,6 +42,19 @@ export function categoryImage(category?: string | null, vertical?: string | null
   return CATEGORY_IMAGES.fashion;
 }
 
+/**
+ * Prefer a real product/listing `image_url` from the API; gracefully fall back
+ * to the deterministic category image when it's null/blank.
+ */
+export function productImage(
+  imageUrl?: string | null,
+  category?: string | null,
+  vertical?: string | null,
+): string {
+  if (imageUrl && imageUrl.trim()) return imageUrl;
+  return categoryImage(category, vertical);
+}
+
 /** API stores discounts as 0–1 fractions; UI clocks use 0–100 percents. */
 export function pctFraction(n: number | null | undefined): number {
   if (n == null) return 15;

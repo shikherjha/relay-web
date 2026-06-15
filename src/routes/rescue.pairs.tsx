@@ -36,7 +36,7 @@ function PairsPage() {
       </div>
 
       {pairs.length === 0 && (
-        <p className="text-sm text-muted-foreground mt-10">No pairs found — reset demo and ensure both users have wishes + returned units.</p>
+        <p className="text-sm text-muted-foreground mt-10">No pairs found yet — pairs appear when nearby members have matching wishes and returned units.</p>
       )}
 
       <div className="space-y-6 mt-10">

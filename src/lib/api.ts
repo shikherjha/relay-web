@@ -1,7 +1,9 @@
 import { DEMO_USER_ID } from "./demo-constants";
 import { useRelay } from "./store";
 
-const BASE = (import.meta as any).env?.VITE_API_URL ?? "http://localhost:8010";
+const BASE =
+  (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_API_URL ??
+  "http://localhost:8010";
 
 export function getUserId(): string {
   if (typeof window !== "undefined") {
@@ -44,20 +46,53 @@ export async function withFallback<T>(p: Promise<T>, fallback: T): Promise<T> {
   }
 }
 
+type MediaResult = { job_id: string; status: string; passport_id?: string };
+
 export async function uploadReturnMedia(returnId: string, file: Blob, filename = "demo.jpg") {
+  return uploadReturnMediaFiles(returnId, [file], filename.replace(/\.[^.]+$/, ""));
+}
+
+/**
+ * Multi-angle / video upload. The backend accepts multiple files under the
+ * repeated `files` field (photos for several angles + an optional video).
+ */
+export async function uploadReturnMediaFiles(
+  returnId: string,
+  files: Blob[],
+  namePrefix = "angle",
+): Promise<MediaResult> {
+  return uploadFiles<MediaResult>(`/returns/${returnId}/media`, files, namePrefix);
+}
+
+/**
+ * Generic multipart upload — posts 1..n images/video under the repeated `files`
+ * field (the contract for return media, resell, and seller relist). Carries the
+ * persona-aware `X-User-Id` header like the JSON client.
+ */
+export async function uploadFiles<T>(
+  path: string,
+  files: Blob[],
+  namePrefix = "file",
+): Promise<T> {
   const form = new FormData();
-  form.append("files", file, filename);
+  files.forEach((f, i) => {
+    const ext = f.type?.startsWith("video/") ? "mp4" : "jpg";
+    form.append("files", f, `${namePrefix}-${i + 1}.${ext}`);
+  });
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 60000);
   try {
-    const res = await fetch(`${BASE}/returns/${returnId}/media`, {
+    const res = await fetch(`${BASE}${path}`, {
       method: "POST",
       headers: { "X-User-Id": getUserId() },
       body: form,
       signal: ctrl.signal,
     });
-    if (!res.ok) throw new Error(`API ${res.status}`);
-    return (await res.json()) as { job_id: string; status: string; passport_id?: string };
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`API ${res.status}${text ? `: ${text.slice(0, 120)}` : ""}`);
+    }
+    return (await res.json()) as T;
   } finally {
     clearTimeout(t);
   }

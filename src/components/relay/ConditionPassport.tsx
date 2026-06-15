@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import type { Passport } from "@/lib/mock-data";
 import { GradeBadge } from "./GradeBadge";
+import { VerificationBadge } from "./VerificationBadge";
 
 const sevColor = ["", "#7FB069", "#E8A33D", "#C4502E"];
 
@@ -37,6 +38,11 @@ export function ConditionPassport({ p, compact = false }: { p: Passport; compact
             <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Condition Passport</div>
             <h3 className="font-display text-xl mt-1 leading-tight">{p.itemName}</h3>
             <div className="text-xs text-muted-foreground mt-0.5">{p.category} · {p.packaging} packaging</div>
+            {p.verification && (
+              <div className="mt-2">
+                <VerificationBadge verification={p.verification} />
+              </div>
+            )}
           </div>
           <GradeBadge grade={p.grade} size="lg" confidence={p.confidence} />
         </div>

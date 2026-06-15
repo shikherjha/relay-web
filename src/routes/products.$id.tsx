@@ -2,7 +2,7 @@ import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ArrowRight, ShieldCheck } from "lucide-react";
-import { categoryImage } from "@/lib/demo-constants";
+import { productImage } from "@/lib/demo-constants";
 import { getProduct } from "@/lib/relay-api";
 
 export const Route = createFileRoute("/products/$id")({
@@ -28,7 +28,7 @@ function PDP() {
       <div className="grid lg:grid-cols-2 gap-10 mt-6">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
           <div className="rounded-2xl overflow-hidden bg-secondary aspect-[4/5]">
-            <img src={categoryImage(p.category, p.vertical)} alt={p.title} className="w-full h-full object-cover" />
+            <img src={productImage(p.image_url, p.category, p.vertical)} alt={p.title} className="w-full h-full object-cover" />
           </div>
         </motion.div>
         <div>

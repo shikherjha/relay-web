@@ -1,50 +1,55 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Moon, Sun, RotateCcw } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { ArrowLeft, Moon, Sun } from "lucide-react";
 import { ImpactWallet } from "./ImpactWallet";
-import { useRelay, type Persona } from "@/lib/store";
-import { demoReset } from "@/lib/relay-api";
+import { SmileLogo } from "./SmileLogo";
+import { useRelay } from "@/lib/store";
 
-const consumerLinks = [
+const buyerLinks = [
   { to: "/", label: "Discover" },
   { to: "/rescue", label: "Rescue" },
-  { to: "/wishlist", label: "Wishlist" },
-  { to: "/returns/new", label: "Return" },
+  { to: "/second-life", label: "Second Life" },
+  { to: "/genie", label: "Genie" },
+  { to: "/returns", label: "Return" },
   { to: "/cart", label: "Cart" },
 ];
 
-const sellerLinks = [{ to: "/ops", label: "Ops" }];
+// Seller persona has exactly two destinations: Ops (the seller landing) and the
+// returned-unit tracking / relist console.
+const sellerLinks = [
+  { to: "/ops", label: "Ops" },
+  { to: "/seller/orders", label: "Returned units" },
+];
 
 export function Nav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { theme, toggleTheme, persona, setPersona } = useRelay();
-  const qc = useQueryClient();
-  const [resetting, setResetting] = useState(false);
+  const { theme, toggleTheme, persona } = useRelay();
 
-  const links = persona === "seller" ? [...consumerLinks, ...sellerLinks] : consumerLinks;
-
-  const onReset = async () => {
-    if (resetting) return;
-    setResetting(true);
-    try {
-      await demoReset();
-      await qc.invalidateQueries();
-    } catch (e) {
-      console.error(e);
-      alert("Demo reset failed — is relay-api running on VITE_API_URL?");
-    } finally {
-      setResetting(false);
-    }
-  };
+  const isSeller = persona === "seller";
+  const links = isSeller ? sellerLinks : buyerLinks;
 
   return (
     <header className="sticky top-0 z-40 backdrop-blur-md bg-background/75 border-b border-border/60">
-      <div className="mx-auto max-w-[1200px] px-6 h-16 flex items-center justify-between gap-4">
-        <Link to="/" className="flex items-center gap-2 group shrink-0">
-          <div className="size-7 rounded-md bg-primary flex items-center justify-center text-primary-foreground font-display font-semibold">R</div>
-          <span className="font-display text-lg tracking-tight">Relay</span>
-        </Link>
+      <div className="mx-auto max-w-[1320px] px-6 h-16 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <Link
+            to={persona === "seller" ? "/ops" : "/"}
+            className="flex items-center gap-2 group shrink-0"
+          >
+            <div className="size-7 rounded-md bg-primary flex items-center justify-center text-primary-foreground">
+              <SmileLogo size={18} color="currentColor" />
+            </div>
+            <span className="font-display text-lg tracking-tight">Relay</span>
+            <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground border border-border rounded-full px-1.5 py-0.5 ml-1 hidden sm:inline-block">
+              {persona === "seller" ? "Ops · control room" : "second-life"}
+            </span>
+          </Link>
+          <Link
+            to="/amazon"
+            className="hidden md:inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground border border-border rounded-full px-2 py-1 ml-1"
+          >
+            <ArrowLeft className="size-3" /> Amazon
+          </Link>
+        </div>
 
         <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
           {links.map((l) => {
@@ -62,35 +67,10 @@ export function Nav() {
         </nav>
 
         <div className="flex items-center gap-2 shrink-0">
-          {/* Persona toggle — switches X-User-Id for demo flows */}
-          <div className="hidden sm:flex items-center rounded-full border border-border p-0.5 text-[11px]">
-            {(["seller", "buyer"] as Persona[]).map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => {
-                  setPersona(p);
-                  qc.invalidateQueries();
-                }}
-                className={`px-2.5 py-1 rounded-full capitalize transition ${persona === p ? "bg-secondary text-foreground font-medium" : "text-muted-foreground"}`}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-
-          <ImpactWallet />
-
-          {/* Hidden-in-plain-sight demo reset (dev / rehearsal) */}
-          <button
-            type="button"
-            title="Reset demo data"
-            onClick={onReset}
-            disabled={resetting}
-            className="size-9 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors text-muted-foreground"
-          >
-            <RotateCcw className={`size-4 ${resetting ? "animate-spin" : ""}`} />
-          </button>
+          {/* Buyer-only: the second-life footprint / green-credit wallet. Sellers
+              live in the Ops console and have no consumer wallet. Persona is
+              switched from the single global toggle on the Amazon storefront. */}
+          {!isSeller && <ImpactWallet />}
 
           <button
             type="button"

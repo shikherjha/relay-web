@@ -10,19 +10,33 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WishlistRouteImport } from './routes/wishlist'
+import { Route as SecondLifeRouteImport } from './routes/second-life'
 import { Route as RescueRouteImport } from './routes/rescue'
 import { Route as OpsRouteImport } from './routes/ops'
 import { Route as ImpactRouteImport } from './routes/impact'
+import { Route as GenieRouteImport } from './routes/genie'
 import { Route as CartRouteImport } from './routes/cart'
+import { Route as AmazonRouteImport } from './routes/amazon'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ReturnsIndexRouteImport } from './routes/returns.index'
+import { Route as AmazonIndexRouteImport } from './routes/amazon.index'
+import { Route as SellerOrdersRouteImport } from './routes/seller.orders'
 import { Route as ReturnsNewRouteImport } from './routes/returns.new'
 import { Route as RescuePairsRouteImport } from './routes/rescue.pairs'
 import { Route as ProductsIdRouteImport } from './routes/products.$id'
 import { Route as LedgerUnitIdRouteImport } from './routes/ledger.$unitId'
+import { Route as AmazonSellerRouteImport } from './routes/amazon.seller'
+import { Route as AmazonOrdersRouteImport } from './routes/amazon.orders'
+import { Route as AmazonProductsIdRouteImport } from './routes/amazon.products.$id'
 
 const WishlistRoute = WishlistRouteImport.update({
   id: '/wishlist',
   path: '/wishlist',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SecondLifeRoute = SecondLifeRouteImport.update({
+  id: '/second-life',
+  path: '/second-life',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RescueRoute = RescueRouteImport.update({
@@ -40,14 +54,39 @@ const ImpactRoute = ImpactRouteImport.update({
   path: '/impact',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GenieRoute = GenieRouteImport.update({
+  id: '/genie',
+  path: '/genie',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CartRoute = CartRouteImport.update({
   id: '/cart',
   path: '/cart',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AmazonRoute = AmazonRouteImport.update({
+  id: '/amazon',
+  path: '/amazon',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReturnsIndexRoute = ReturnsIndexRouteImport.update({
+  id: '/returns/',
+  path: '/returns/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AmazonIndexRoute = AmazonIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AmazonRoute,
+} as any)
+const SellerOrdersRoute = SellerOrdersRouteImport.update({
+  id: '/seller/orders',
+  path: '/seller/orders',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReturnsNewRoute = ReturnsNewRouteImport.update({
@@ -70,93 +109,165 @@ const LedgerUnitIdRoute = LedgerUnitIdRouteImport.update({
   path: '/ledger/$unitId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AmazonSellerRoute = AmazonSellerRouteImport.update({
+  id: '/seller',
+  path: '/seller',
+  getParentRoute: () => AmazonRoute,
+} as any)
+const AmazonOrdersRoute = AmazonOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => AmazonRoute,
+} as any)
+const AmazonProductsIdRoute = AmazonProductsIdRouteImport.update({
+  id: '/products/$id',
+  path: '/products/$id',
+  getParentRoute: () => AmazonRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/amazon': typeof AmazonRouteWithChildren
   '/cart': typeof CartRoute
+  '/genie': typeof GenieRoute
   '/impact': typeof ImpactRoute
   '/ops': typeof OpsRoute
   '/rescue': typeof RescueRouteWithChildren
+  '/second-life': typeof SecondLifeRoute
   '/wishlist': typeof WishlistRoute
+  '/amazon/orders': typeof AmazonOrdersRoute
+  '/amazon/seller': typeof AmazonSellerRoute
   '/ledger/$unitId': typeof LedgerUnitIdRoute
   '/products/$id': typeof ProductsIdRoute
   '/rescue/pairs': typeof RescuePairsRoute
   '/returns/new': typeof ReturnsNewRoute
+  '/seller/orders': typeof SellerOrdersRoute
+  '/amazon/': typeof AmazonIndexRoute
+  '/returns/': typeof ReturnsIndexRoute
+  '/amazon/products/$id': typeof AmazonProductsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cart': typeof CartRoute
+  '/genie': typeof GenieRoute
   '/impact': typeof ImpactRoute
   '/ops': typeof OpsRoute
   '/rescue': typeof RescueRouteWithChildren
+  '/second-life': typeof SecondLifeRoute
   '/wishlist': typeof WishlistRoute
+  '/amazon/orders': typeof AmazonOrdersRoute
+  '/amazon/seller': typeof AmazonSellerRoute
   '/ledger/$unitId': typeof LedgerUnitIdRoute
   '/products/$id': typeof ProductsIdRoute
   '/rescue/pairs': typeof RescuePairsRoute
   '/returns/new': typeof ReturnsNewRoute
+  '/seller/orders': typeof SellerOrdersRoute
+  '/amazon': typeof AmazonIndexRoute
+  '/returns': typeof ReturnsIndexRoute
+  '/amazon/products/$id': typeof AmazonProductsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/amazon': typeof AmazonRouteWithChildren
   '/cart': typeof CartRoute
+  '/genie': typeof GenieRoute
   '/impact': typeof ImpactRoute
   '/ops': typeof OpsRoute
   '/rescue': typeof RescueRouteWithChildren
+  '/second-life': typeof SecondLifeRoute
   '/wishlist': typeof WishlistRoute
+  '/amazon/orders': typeof AmazonOrdersRoute
+  '/amazon/seller': typeof AmazonSellerRoute
   '/ledger/$unitId': typeof LedgerUnitIdRoute
   '/products/$id': typeof ProductsIdRoute
   '/rescue/pairs': typeof RescuePairsRoute
   '/returns/new': typeof ReturnsNewRoute
+  '/seller/orders': typeof SellerOrdersRoute
+  '/amazon/': typeof AmazonIndexRoute
+  '/returns/': typeof ReturnsIndexRoute
+  '/amazon/products/$id': typeof AmazonProductsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/amazon'
     | '/cart'
+    | '/genie'
     | '/impact'
     | '/ops'
     | '/rescue'
+    | '/second-life'
     | '/wishlist'
+    | '/amazon/orders'
+    | '/amazon/seller'
     | '/ledger/$unitId'
     | '/products/$id'
     | '/rescue/pairs'
     | '/returns/new'
+    | '/seller/orders'
+    | '/amazon/'
+    | '/returns/'
+    | '/amazon/products/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/cart'
+    | '/genie'
     | '/impact'
     | '/ops'
     | '/rescue'
+    | '/second-life'
     | '/wishlist'
+    | '/amazon/orders'
+    | '/amazon/seller'
     | '/ledger/$unitId'
     | '/products/$id'
     | '/rescue/pairs'
     | '/returns/new'
+    | '/seller/orders'
+    | '/amazon'
+    | '/returns'
+    | '/amazon/products/$id'
   id:
     | '__root__'
     | '/'
+    | '/amazon'
     | '/cart'
+    | '/genie'
     | '/impact'
     | '/ops'
     | '/rescue'
+    | '/second-life'
     | '/wishlist'
+    | '/amazon/orders'
+    | '/amazon/seller'
     | '/ledger/$unitId'
     | '/products/$id'
     | '/rescue/pairs'
     | '/returns/new'
+    | '/seller/orders'
+    | '/amazon/'
+    | '/returns/'
+    | '/amazon/products/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AmazonRoute: typeof AmazonRouteWithChildren
   CartRoute: typeof CartRoute
+  GenieRoute: typeof GenieRoute
   ImpactRoute: typeof ImpactRoute
   OpsRoute: typeof OpsRoute
   RescueRoute: typeof RescueRouteWithChildren
+  SecondLifeRoute: typeof SecondLifeRoute
   WishlistRoute: typeof WishlistRoute
   LedgerUnitIdRoute: typeof LedgerUnitIdRoute
   ProductsIdRoute: typeof ProductsIdRoute
   ReturnsNewRoute: typeof ReturnsNewRoute
+  SellerOrdersRoute: typeof SellerOrdersRoute
+  ReturnsIndexRoute: typeof ReturnsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -166,6 +277,13 @@ declare module '@tanstack/react-router' {
       path: '/wishlist'
       fullPath: '/wishlist'
       preLoaderRoute: typeof WishlistRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/second-life': {
+      id: '/second-life'
+      path: '/second-life'
+      fullPath: '/second-life'
+      preLoaderRoute: typeof SecondLifeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/rescue': {
@@ -189,6 +307,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ImpactRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/genie': {
+      id: '/genie'
+      path: '/genie'
+      fullPath: '/genie'
+      preLoaderRoute: typeof GenieRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cart': {
       id: '/cart'
       path: '/cart'
@@ -196,11 +321,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CartRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/amazon': {
+      id: '/amazon'
+      path: '/amazon'
+      fullPath: '/amazon'
+      preLoaderRoute: typeof AmazonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/returns/': {
+      id: '/returns/'
+      path: '/returns'
+      fullPath: '/returns/'
+      preLoaderRoute: typeof ReturnsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/amazon/': {
+      id: '/amazon/'
+      path: '/'
+      fullPath: '/amazon/'
+      preLoaderRoute: typeof AmazonIndexRouteImport
+      parentRoute: typeof AmazonRoute
+    }
+    '/seller/orders': {
+      id: '/seller/orders'
+      path: '/seller/orders'
+      fullPath: '/seller/orders'
+      preLoaderRoute: typeof SellerOrdersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/returns/new': {
@@ -231,8 +384,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LedgerUnitIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/amazon/seller': {
+      id: '/amazon/seller'
+      path: '/seller'
+      fullPath: '/amazon/seller'
+      preLoaderRoute: typeof AmazonSellerRouteImport
+      parentRoute: typeof AmazonRoute
+    }
+    '/amazon/orders': {
+      id: '/amazon/orders'
+      path: '/orders'
+      fullPath: '/amazon/orders'
+      preLoaderRoute: typeof AmazonOrdersRouteImport
+      parentRoute: typeof AmazonRoute
+    }
+    '/amazon/products/$id': {
+      id: '/amazon/products/$id'
+      path: '/products/$id'
+      fullPath: '/amazon/products/$id'
+      preLoaderRoute: typeof AmazonProductsIdRouteImport
+      parentRoute: typeof AmazonRoute
+    }
   }
 }
+
+interface AmazonRouteChildren {
+  AmazonOrdersRoute: typeof AmazonOrdersRoute
+  AmazonSellerRoute: typeof AmazonSellerRoute
+  AmazonIndexRoute: typeof AmazonIndexRoute
+  AmazonProductsIdRoute: typeof AmazonProductsIdRoute
+}
+
+const AmazonRouteChildren: AmazonRouteChildren = {
+  AmazonOrdersRoute: AmazonOrdersRoute,
+  AmazonSellerRoute: AmazonSellerRoute,
+  AmazonIndexRoute: AmazonIndexRoute,
+  AmazonProductsIdRoute: AmazonProductsIdRoute,
+}
+
+const AmazonRouteWithChildren =
+  AmazonRoute._addFileChildren(AmazonRouteChildren)
 
 interface RescueRouteChildren {
   RescuePairsRoute: typeof RescuePairsRoute
@@ -247,14 +438,19 @@ const RescueRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AmazonRoute: AmazonRouteWithChildren,
   CartRoute: CartRoute,
+  GenieRoute: GenieRoute,
   ImpactRoute: ImpactRoute,
   OpsRoute: OpsRoute,
   RescueRoute: RescueRouteWithChildren,
+  SecondLifeRoute: SecondLifeRoute,
   WishlistRoute: WishlistRoute,
   LedgerUnitIdRoute: LedgerUnitIdRoute,
   ProductsIdRoute: ProductsIdRoute,
   ReturnsNewRoute: ReturnsNewRoute,
+  SellerOrdersRoute: SellerOrdersRoute,
+  ReturnsIndexRoute: ReturnsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

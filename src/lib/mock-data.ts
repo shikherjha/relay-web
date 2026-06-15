@@ -11,6 +11,15 @@ export const gradeColor: Record<Grade, string> = {
 
 export type Defect = { label: string; severity: 1 | 2 | 3; x?: number; y?: number };
 
+/** AI order-vs-item verification (color / item match) surfaced on passports + listings. */
+export type VerificationState = "match" | "mismatch" | "unknown";
+export type PassportVerification = {
+  color_match: VerificationState;
+  item_match: VerificationState;
+  observed_color?: string;
+  expected_color?: string;
+};
+
 export type Passport = {
   id: string;
   unitId: string;
@@ -23,6 +32,7 @@ export type Passport = {
   defects: Defect[];
   hash: string;
   graderNote: string;
+  verification?: PassportVerification;
 };
 
 export type Product = {

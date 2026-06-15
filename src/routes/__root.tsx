@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -11,6 +12,9 @@ import { type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { Nav } from "@/components/relay/Nav";
+import { AmazonNav } from "@/components/relay/AmazonNav";
+import { SmileTransitionOverlay } from "@/components/relay/SmileTransition";
+import { useRelay } from "@/lib/store";
 
 function NotFoundComponent() {
   return (
@@ -75,10 +79,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Relay — Every product deserves a second life" },
-      { name: "description", content: "The trusted second-life layer for modern marketplaces. AI-graded Condition Passports, hyperlocal rescue, verified history." },
+      {
+        name: "description",
+        content:
+          "The trusted second-life layer for modern marketplaces. AI-graded Condition Passports, hyperlocal rescue, verified history.",
+      },
       { name: "author", content: "Relay" },
       { property: "og:title", content: "Relay — Second-life commerce, done right" },
-      { property: "og:description", content: "AI-graded Condition Passports route returned items to their best next owner — not the landfill." },
+      {
+        property: "og:description",
+        content:
+          "AI-graded Condition Passports route returned items to their best next owner — not the landfill.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -86,7 +98,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap",
+      },
     ],
   }),
   shellComponent: RootShell,
@@ -111,15 +126,19 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const persona = useRelay((s) => s.persona);
+  const layer: "amazon" | "relay" = pathname.startsWith("/amazon") ? "amazon" : "relay";
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen flex flex-col">
-        <Nav />
+      <div className="min-h-screen flex flex-col" data-layer={layer} data-persona={persona}>
+        {layer === "amazon" ? <AmazonNav /> : <Nav />}
         <main className="flex-1">
           {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
           <Outlet />
         </main>
+        <SmileTransitionOverlay />
       </div>
     </QueryClientProvider>
   );
