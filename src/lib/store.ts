@@ -40,6 +40,26 @@ export function tierFor(credits: number): {
 
 export type CartLine = { productId: string; size: string };
 
+/**
+ * A Relay (Layer-2) cart line — a Second-Life listing or a Rescue listing the
+ * buyer has staged for checkout. Distinct from the Amazon Layer-1 product cart:
+ * these reference resale/rescue *listings* (by id), not catalogue products.
+ */
+export type RelayCartItem = {
+  kind: "second_life" | "rescue";
+  listingId: string;
+  unitId: string;
+  title: string;
+  imageUrl?: string | null;
+  category?: string | null;
+  vertical?: string | null;
+  price: number;
+  grade?: string | null;
+  ships?: boolean;
+  // Second-Life only: "p2p" | "certified".
+  source?: string | null;
+};
+
 type Store = {
   theme: "light" | "dark";
   toggleTheme: () => void;
@@ -58,6 +78,12 @@ type Store = {
   addToCart: (item: CartLine) => void;
   removeFromCart: (productId: string, size: string) => void;
   clearExtraSizes: (productId: string, keepSize: string) => void;
+  // Relay Layer-2 cart (Second-Life + Rescue resale items) — checked out via
+  // POST /orders/relay-checkout into the buyer's Relay order history.
+  relayCart: RelayCartItem[];
+  addToRelayCart: (item: RelayCartItem) => void;
+  removeFromRelayCart: (listingId: string) => void;
+  clearRelayCart: () => void;
   // Genie (reverse wishlist) — locally dismissed wishes.
   droppedWishes: string[];
   dropWish: (id: string) => void;
@@ -97,6 +123,16 @@ export const useRelay = create<Store>((set) => ({
     set((s) => ({ cart: s.cart.filter((c) => !(c.productId === productId && c.size === size)) })),
   clearExtraSizes: (productId, keepSize) =>
     set((s) => ({ cart: s.cart.filter((c) => c.productId !== productId || c.size === keepSize) })),
+  relayCart: [],
+  addToRelayCart: (item) =>
+    set((s) =>
+      s.relayCart.some((c) => c.listingId === item.listingId)
+        ? s
+        : { relayCart: [...s.relayCart, item] },
+    ),
+  removeFromRelayCart: (listingId) =>
+    set((s) => ({ relayCart: s.relayCart.filter((c) => c.listingId !== listingId) })),
+  clearRelayCart: () => set({ relayCart: [] }),
   droppedWishes: [],
   dropWish: (id) => set((s) => ({ droppedWishes: [...s.droppedWishes, id] })),
   transitioning: false,

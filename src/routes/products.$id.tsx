@@ -52,7 +52,7 @@ function PDP() {
           <Link to="/returns/new" className="mt-8 inline-flex items-center gap-2 bg-primary text-primary-foreground px-5 py-3 rounded-xl text-sm font-medium">
             Start a return <ArrowRight className="size-4" />
           </Link>
-          <Link to="/cart" className="ml-3 inline-flex items-center gap-2 border border-border px-5 py-3 rounded-xl text-sm">
+          <Link to="/amazon/cart" className="ml-3 inline-flex items-center gap-2 border border-border px-5 py-3 rounded-xl text-sm">
             View cart
           </Link>
         </div>

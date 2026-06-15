@@ -10,7 +10,7 @@ const buyerLinks = [
   { to: "/second-life", label: "Second Life" },
   { to: "/genie", label: "Genie" },
   { to: "/returns", label: "Return" },
-  { to: "/cart", label: "Cart" },
+  { to: "/relay-cart", label: "Cart" },
 ];
 
 // Seller persona has exactly two destinations: Ops (the seller landing) and the
@@ -23,6 +23,7 @@ const sellerLinks = [
 export function Nav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { theme, toggleTheme, persona } = useRelay();
+  const relayCartCount = useRelay((s) => s.relayCart.length);
 
   const isSeller = persona === "seller";
   const links = isSeller ? sellerLinks : buyerLinks;
@@ -54,13 +55,19 @@ export function Nav() {
         <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
           {links.map((l) => {
             const active = pathname === l.to || (l.to !== "/" && pathname.startsWith(l.to));
+            const showCount = l.to === "/relay-cart" && relayCartCount > 0;
             return (
               <Link
                 key={l.to}
                 to={l.to}
-                className={`px-3 py-1.5 text-sm rounded-full transition-colors ${active ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                className={`relative px-3 py-1.5 text-sm rounded-full transition-colors ${active ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
                 {l.label}
+                {showCount && (
+                  <span className="ml-1.5 inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold tabular align-middle">
+                    {relayCartCount}
+                  </span>
+                )}
               </Link>
             );
           })}

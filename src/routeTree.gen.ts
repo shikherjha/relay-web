@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as WishlistRouteImport } from './routes/wishlist'
 import { Route as SecondLifeRouteImport } from './routes/second-life'
 import { Route as RescueRouteImport } from './routes/rescue'
+import { Route as RelayCartRouteImport } from './routes/relay-cart'
 import { Route as OpsRouteImport } from './routes/ops'
 import { Route as ImpactRouteImport } from './routes/impact'
 import { Route as GenieRouteImport } from './routes/genie'
@@ -27,6 +28,7 @@ import { Route as ProductsIdRouteImport } from './routes/products.$id'
 import { Route as LedgerUnitIdRouteImport } from './routes/ledger.$unitId'
 import { Route as AmazonSellerRouteImport } from './routes/amazon.seller'
 import { Route as AmazonOrdersRouteImport } from './routes/amazon.orders'
+import { Route as AmazonCartRouteImport } from './routes/amazon.cart'
 import { Route as AmazonProductsIdRouteImport } from './routes/amazon.products.$id'
 
 const WishlistRoute = WishlistRouteImport.update({
@@ -42,6 +44,11 @@ const SecondLifeRoute = SecondLifeRouteImport.update({
 const RescueRoute = RescueRouteImport.update({
   id: '/rescue',
   path: '/rescue',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RelayCartRoute = RelayCartRouteImport.update({
+  id: '/relay-cart',
+  path: '/relay-cart',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OpsRoute = OpsRouteImport.update({
@@ -119,6 +126,11 @@ const AmazonOrdersRoute = AmazonOrdersRouteImport.update({
   path: '/orders',
   getParentRoute: () => AmazonRoute,
 } as any)
+const AmazonCartRoute = AmazonCartRouteImport.update({
+  id: '/cart',
+  path: '/cart',
+  getParentRoute: () => AmazonRoute,
+} as any)
 const AmazonProductsIdRoute = AmazonProductsIdRouteImport.update({
   id: '/products/$id',
   path: '/products/$id',
@@ -132,9 +144,11 @@ export interface FileRoutesByFullPath {
   '/genie': typeof GenieRoute
   '/impact': typeof ImpactRoute
   '/ops': typeof OpsRoute
+  '/relay-cart': typeof RelayCartRoute
   '/rescue': typeof RescueRouteWithChildren
   '/second-life': typeof SecondLifeRoute
   '/wishlist': typeof WishlistRoute
+  '/amazon/cart': typeof AmazonCartRoute
   '/amazon/orders': typeof AmazonOrdersRoute
   '/amazon/seller': typeof AmazonSellerRoute
   '/ledger/$unitId': typeof LedgerUnitIdRoute
@@ -152,9 +166,11 @@ export interface FileRoutesByTo {
   '/genie': typeof GenieRoute
   '/impact': typeof ImpactRoute
   '/ops': typeof OpsRoute
+  '/relay-cart': typeof RelayCartRoute
   '/rescue': typeof RescueRouteWithChildren
   '/second-life': typeof SecondLifeRoute
   '/wishlist': typeof WishlistRoute
+  '/amazon/cart': typeof AmazonCartRoute
   '/amazon/orders': typeof AmazonOrdersRoute
   '/amazon/seller': typeof AmazonSellerRoute
   '/ledger/$unitId': typeof LedgerUnitIdRoute
@@ -174,9 +190,11 @@ export interface FileRoutesById {
   '/genie': typeof GenieRoute
   '/impact': typeof ImpactRoute
   '/ops': typeof OpsRoute
+  '/relay-cart': typeof RelayCartRoute
   '/rescue': typeof RescueRouteWithChildren
   '/second-life': typeof SecondLifeRoute
   '/wishlist': typeof WishlistRoute
+  '/amazon/cart': typeof AmazonCartRoute
   '/amazon/orders': typeof AmazonOrdersRoute
   '/amazon/seller': typeof AmazonSellerRoute
   '/ledger/$unitId': typeof LedgerUnitIdRoute
@@ -197,9 +215,11 @@ export interface FileRouteTypes {
     | '/genie'
     | '/impact'
     | '/ops'
+    | '/relay-cart'
     | '/rescue'
     | '/second-life'
     | '/wishlist'
+    | '/amazon/cart'
     | '/amazon/orders'
     | '/amazon/seller'
     | '/ledger/$unitId'
@@ -217,9 +237,11 @@ export interface FileRouteTypes {
     | '/genie'
     | '/impact'
     | '/ops'
+    | '/relay-cart'
     | '/rescue'
     | '/second-life'
     | '/wishlist'
+    | '/amazon/cart'
     | '/amazon/orders'
     | '/amazon/seller'
     | '/ledger/$unitId'
@@ -238,9 +260,11 @@ export interface FileRouteTypes {
     | '/genie'
     | '/impact'
     | '/ops'
+    | '/relay-cart'
     | '/rescue'
     | '/second-life'
     | '/wishlist'
+    | '/amazon/cart'
     | '/amazon/orders'
     | '/amazon/seller'
     | '/ledger/$unitId'
@@ -260,6 +284,7 @@ export interface RootRouteChildren {
   GenieRoute: typeof GenieRoute
   ImpactRoute: typeof ImpactRoute
   OpsRoute: typeof OpsRoute
+  RelayCartRoute: typeof RelayCartRoute
   RescueRoute: typeof RescueRouteWithChildren
   SecondLifeRoute: typeof SecondLifeRoute
   WishlistRoute: typeof WishlistRoute
@@ -291,6 +316,13 @@ declare module '@tanstack/react-router' {
       path: '/rescue'
       fullPath: '/rescue'
       preLoaderRoute: typeof RescueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/relay-cart': {
+      id: '/relay-cart'
+      path: '/relay-cart'
+      fullPath: '/relay-cart'
+      preLoaderRoute: typeof RelayCartRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ops': {
@@ -398,6 +430,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AmazonOrdersRouteImport
       parentRoute: typeof AmazonRoute
     }
+    '/amazon/cart': {
+      id: '/amazon/cart'
+      path: '/cart'
+      fullPath: '/amazon/cart'
+      preLoaderRoute: typeof AmazonCartRouteImport
+      parentRoute: typeof AmazonRoute
+    }
     '/amazon/products/$id': {
       id: '/amazon/products/$id'
       path: '/products/$id'
@@ -409,6 +448,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AmazonRouteChildren {
+  AmazonCartRoute: typeof AmazonCartRoute
   AmazonOrdersRoute: typeof AmazonOrdersRoute
   AmazonSellerRoute: typeof AmazonSellerRoute
   AmazonIndexRoute: typeof AmazonIndexRoute
@@ -416,6 +456,7 @@ interface AmazonRouteChildren {
 }
 
 const AmazonRouteChildren: AmazonRouteChildren = {
+  AmazonCartRoute: AmazonCartRoute,
   AmazonOrdersRoute: AmazonOrdersRoute,
   AmazonSellerRoute: AmazonSellerRoute,
   AmazonIndexRoute: AmazonIndexRoute,
@@ -443,6 +484,7 @@ const rootRouteChildren: RootRouteChildren = {
   GenieRoute: GenieRoute,
   ImpactRoute: ImpactRoute,
   OpsRoute: OpsRoute,
+  RelayCartRoute: RelayCartRoute,
   RescueRoute: RescueRouteWithChildren,
   SecondLifeRoute: SecondLifeRoute,
   WishlistRoute: WishlistRoute,

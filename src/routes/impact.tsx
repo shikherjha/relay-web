@@ -13,6 +13,9 @@ import {
 import { TIER_STEPS, tierFor, useRelay } from "@/lib/store";
 
 export const Route = createFileRoute("/impact")({
+  validateSearch: (search: Record<string, unknown>): { tab?: string } => ({
+    tab: typeof search.tab === "string" ? search.tab : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Impact Wallet — Relay" },
@@ -49,6 +52,7 @@ const tierColor: Record<string, string> = {
 };
 
 function ImpactPage() {
+  const { tab } = Route.useSearch();
   const userId = useRelay((s) => s.userId);
   const { data: wallet = FALLBACK_WALLET } = useQuery({
     queryKey: ["impact", userId],
@@ -284,7 +288,7 @@ function ImpactPage() {
       </div>
 
       {/* Live tracking — orders, returns (to their next home), and resells. */}
-      <BuyerActivity />
+      <BuyerActivity defaultTab={tab} />
     </div>
   );
 }

@@ -81,7 +81,10 @@ function MediaStrip({ urls }: { urls?: string[] }) {
   );
 }
 
-export function BuyerActivity() {
+const VALID_TABS = ["returns", "resells", "orders"];
+
+export function BuyerActivity({ defaultTab }: { defaultTab?: string } = {}) {
+  const initialTab = defaultTab && VALID_TABS.includes(defaultTab) ? defaultTab : "returns";
   const { data: orders = [] } = useQuery({ queryKey: ["orders"], queryFn: () => getOrders([]) });
   const { data: returns = [] } = useQuery({
     queryKey: ["my-returns"],
@@ -99,7 +102,7 @@ export function BuyerActivity() {
         Track your orders, follow each return to its next home, and watch your Second-Life resells.
       </p>
 
-      <Tabs defaultValue="returns">
+      <Tabs defaultValue={initialTab}>
         <TabsList>
           <TabsTrigger value="returns">
             Returns{returns.length ? ` · ${returns.length}` : ""}
@@ -248,10 +251,23 @@ export function BuyerActivity() {
                   className="card-soft overflow-hidden"
                 >
                   <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-secondary/50 border-b border-border text-xs text-muted-foreground">
-                    <span className="inline-flex items-center gap-1.5">
-                      <Package className="size-3" /> Order {o.id.slice(0, 8)}
+                    <span className="inline-flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Package className="size-3" /> Order {o.id.slice(0, 8)}
+                      </span>
+                      {o.source === "relay" && (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
+                          style={{
+                            color: "var(--color-relay)",
+                            background: "color-mix(in oklab, var(--color-relay) 12%, transparent)",
+                          }}
+                        >
+                          <Recycle className="size-2.5" /> Second Life · Rescue
+                        </span>
+                      )}
                     </span>
-                    <span className="tabular">{fmtDate(o.created_at)}</span>
+                    <span className="tabular">{fmtDate(o.placed_at ?? o.created_at)}</span>
                   </div>
                   <div className="divide-y divide-border">
                     {o.items.map((it) => (

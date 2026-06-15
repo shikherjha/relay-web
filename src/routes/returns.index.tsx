@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Package, RotateCcw, ChevronRight } from "lucide-react";
-import { categoryImage } from "@/lib/demo-constants";
+import { productImage } from "@/lib/demo-constants";
 import { getOrders } from "@/lib/relay-api";
 
 export const Route = createFileRoute("/returns/")({
@@ -21,8 +21,12 @@ function ReturnsList() {
     queryFn: () => getOrders([]),
   });
 
+  // Only show lines that are genuinely still returnable: within the window, not
+  // already returned, not resold/listed, and not in a post-return state.
   const eligible = orders.flatMap((o) =>
-    o.items.filter((it) => it.returnable && !it.returned).map((it) => ({ order: o, item: it })),
+    o.items
+      .filter((it) => it.returnable && !it.returned && !it.listed && !it.return_state)
+      .map((it) => ({ order: o, item: it })),
   );
 
   return (
@@ -58,13 +62,13 @@ function ReturnsList() {
               className="card-soft p-4 flex items-center gap-4 hover:-translate-y-0.5 transition"
             >
               <img
-                src={categoryImage(item.category)}
+                src={productImage(item.image_url, item.category, item.vertical)}
                 alt=""
                 className="size-16 rounded-lg object-cover bg-secondary"
               />
               <div className="flex-1 min-w-0">
                 <div className="text-xs text-primary inline-flex items-center gap-1.5">
-                  <Package className="size-3" /> {order.status ?? "Delivered"}
+                  <Package className="size-3" /> Delivered
                 </div>
                 <div className="font-medium mt-0.5 truncate">{item.title}</div>
                 <div className="text-xs text-muted-foreground mt-0.5 tabular">

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -10,9 +10,10 @@ import {
   BadgeCheck,
   Users,
   Check,
-  Loader2,
   Recycle,
   Camera,
+  ShoppingBag,
+  Tag,
 } from "lucide-react";
 import { productImage } from "@/lib/demo-constants";
 import { GradeBadge } from "@/components/relay/GradeBadge";
@@ -26,13 +27,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useRelay } from "@/lib/store";
-import {
-  buySecondLife,
-  getSecondLife,
-  type BuyResult,
-  type ResaleListing,
-  type ResaleSource,
-} from "@/lib/relay-api";
+import { getSecondLife, type ResaleListing, type ResaleSource } from "@/lib/relay-api";
 import type { Grade } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/second-life")({
@@ -104,6 +99,7 @@ function ConditionGallery({ listing }: { listing: ResaleListing }) {
         <DialogTrigger asChild>
           <button
             type="button"
+            onClick={(e) => e.stopPropagation()}
             className="flex items-center gap-1.5"
             aria-label={`View ${caption.toLowerCase()} for ${listing.title}`}
           >
@@ -186,11 +182,12 @@ function ConditionGallery({ listing }: { listing: ResaleListing }) {
 }
 
 function SecondLifePage() {
+  const navigate = useNavigate();
   const [vertical, setVertical] = useState<string>("all");
   const [source, setSource] = useState<ResaleSource | "all">("all");
-  const [bought, setBought] = useState<Record<string, BuyResult>>({});
-  const [buying, setBuying] = useState<string | null>(null);
-  const addImpact = useRelay((s) => s.addImpact);
+  const relayCart = useRelay((s) => s.relayCart);
+  const addToRelayCart = useRelay((s) => s.addToRelayCart);
+  const removeFromRelayCart = useRelay((s) => s.removeFromRelayCart);
 
   const { data: listings = [], isLoading } = useQuery({
     queryKey: ["second-life", vertical],
@@ -199,23 +196,20 @@ function SecondLifePage() {
 
   const visible = listings.filter((l) => source === "all" || l.source === source);
 
-  const onBuy = async (l: ResaleListing) => {
-    if (buying || bought[l.id]) return;
-    setBuying(l.id);
-    try {
-      const res = await buySecondLife(l.id);
-      setBought((b) => ({ ...b, [l.id]: res }));
-      addImpact(2.4, 0);
-    } catch (e) {
-      console.error(e);
-      setBought((b) => ({
-        ...b,
-        [l.id]: { ok: false, listing_id: l.id, escrow_status: "failed", new_owner_id: "", tx_hash: "" },
-      }));
-    } finally {
-      setBuying(null);
-    }
-  };
+  const addToCart = (l: ResaleListing) =>
+    addToRelayCart({
+      kind: "second_life",
+      listingId: l.id,
+      unitId: l.lifeledger_unit_id ?? l.unit_id,
+      title: l.title,
+      imageUrl: l.image_url,
+      category: l.category,
+      vertical: l.vertical,
+      price: l.list_price,
+      grade: l.resale_grade,
+      ships: l.ships || l.fulfillment === "shipped" || l.fulfillment === "courier",
+      source: l.source,
+    });
 
   return (
     <div className="mx-auto max-w-[1200px] px-6 py-12">
@@ -280,9 +274,10 @@ function SecondLifePage() {
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-8">
         <AnimatePresence initial={false}>
           {visible.map((l, i) => {
-            const result = bought[l.id];
-            const isBought = Boolean(result?.ok);
+            const inCart = relayCart.some((c) => c.listingId === l.id);
             const ships = l.ships || l.fulfillment === "shipped" || l.fulfillment === "courier";
+            const unitId = l.lifeledger_unit_id ?? l.unit_id;
+            const openProduct = () => navigate({ to: "/ledger/$unitId", params: { unitId } });
             return (
               <motion.div
                 key={l.id}
@@ -290,14 +285,19 @@ function SecondLifePage() {
                 initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05, type: "spring", stiffness: 140, damping: 22 }}
-                className="card-soft overflow-hidden flex flex-col"
+                onClick={openProduct}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    openProduct();
+                  }
+                }}
+                role="link"
+                tabIndex={0}
+                aria-label={`Open product page for ${l.title}`}
+                className="card-soft overflow-hidden flex flex-col cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 hover:-translate-y-0.5 transition-transform"
               >
-                <Link
-                  to="/ledger/$unitId"
-                  params={{ unitId: l.lifeledger_unit_id ?? l.unit_id }}
-                  className="relative aspect-[4/3] bg-secondary block group"
-                  aria-label={`Open product page for ${l.title}`}
-                >
+                <div className="relative aspect-[4/3] bg-secondary block overflow-hidden">
                   <img
                     src={productImage(l.image_url, l.category, l.vertical)}
                     alt={l.title}
@@ -310,7 +310,7 @@ function SecondLifePage() {
                   <div className="absolute bottom-3 left-3">
                     <SourceBadge source={l.source} />
                   </div>
-                </Link>
+                </div>
                 <div className="p-4 flex flex-col flex-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span
@@ -333,13 +333,21 @@ function SecondLifePage() {
                     <span className="text-[10px] text-muted-foreground">· {l.age_days}d old</span>
                   </div>
 
-                  <Link
-                    to="/ledger/$unitId"
-                    params={{ unitId: l.lifeledger_unit_id ?? l.unit_id }}
-                    className="font-medium leading-tight mt-2 line-clamp-1 hover:text-primary transition-colors"
-                  >
+                  <div className="font-medium leading-tight mt-2 line-clamp-1 group-hover:text-primary transition-colors">
                     {l.title}
-                  </Link>
+                  </div>
+                  {/* Catalogue detail — brand + category from the original product. */}
+                  <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
+                    {l.brand && (
+                      <span className="inline-flex items-center gap-1 text-foreground">
+                        <Tag className="size-3" /> {l.brand}
+                      </span>
+                    )}
+                    <span className="capitalize">
+                      {l.category}
+                      {l.vertical ? ` · ${l.vertical}` : ""}
+                    </span>
+                  </div>
                   <div className="text-xs text-muted-foreground mt-0.5">{l.lister_label}</div>
                   {l.verification && (
                     <div className="mt-1.5">
@@ -360,48 +368,49 @@ function SecondLifePage() {
 
                   <Link
                     to="/ledger/$unitId"
-                    params={{ unitId: l.lifeledger_unit_id ?? l.unit_id }}
-                    className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                    params={{ unitId }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-primary hover:underline w-fit"
                   >
                     View on-chain history →
                   </Link>
 
                   <ConditionGallery listing={l} />
 
-                  {isBought ? (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      className="mt-4 rounded-xl px-3 py-3 text-sm"
-                      style={{
-                        background: "color-mix(in oklab, var(--color-relay) 12%, transparent)",
-                        color: "var(--color-relay)",
-                      }}
-                    >
-                      <div className="inline-flex items-center gap-1.5 font-medium">
-                        <Check className="size-4" /> Escrow released · it's yours
-                      </div>
-                      {result?.tx_hash && (
-                        <div className="mt-1 font-mono text-[10px] text-muted-foreground truncate">
-                          tx {result.tx_hash.slice(0, 10)}…{result.tx_hash.slice(-6)}
-                        </div>
-                      )}
-                    </motion.div>
+                  {inCart ? (
+                    <div className="mt-4 flex items-center gap-2">
+                      <Link
+                        to="/relay-cart"
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-[0.98] inline-flex items-center justify-center gap-1.5"
+                        style={{
+                          background: "color-mix(in oklab, var(--color-relay) 12%, transparent)",
+                          color: "var(--color-relay)",
+                        }}
+                      >
+                        <Check className="size-4" /> In cart · review
+                      </Link>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeFromRelayCart(l.id);
+                        }}
+                        aria-label={`Remove ${l.title} from cart`}
+                        className="py-2.5 px-3 rounded-xl text-sm text-muted-foreground border border-border hover:bg-secondary transition"
+                      >
+                        Remove
+                      </button>
+                    </div>
                   ) : (
                     <button
-                      disabled={buying === l.id}
-                      onClick={() => onBuy(l)}
-                      className="mt-4 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-[0.98] bg-primary text-primary-foreground hover:bg-[var(--color-relay-hover)] disabled:opacity-60 inline-flex items-center justify-center gap-1.5"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        addToCart(l);
+                      }}
+                      className="mt-4 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-[0.98] bg-primary text-primary-foreground hover:bg-[var(--color-relay-hover)] inline-flex items-center justify-center gap-1.5"
                     >
-                      {buying === l.id ? (
-                        <>
-                          <Loader2 className="size-4 animate-spin" /> Releasing escrow…
-                        </>
-                      ) : ships ? (
-                        "Buy · ship to me"
-                      ) : (
-                        "Buy · keep it local"
-                      )}
+                      <ShoppingBag className="size-4" />
+                      {ships ? "Add to cart · ship to me" : "Add to cart · pickup"}
                     </button>
                   )}
                 </div>

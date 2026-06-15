@@ -71,7 +71,7 @@ export function AmazonNav() {
             <span className="text-sm font-medium">&amp; Orders</span>
           </Link>
           <Link
-            to="/cart"
+            to="/amazon/cart"
             className="relative flex items-center gap-1 px-2 py-1 hover:outline hover:outline-1 hover:outline-white/40 rounded"
           >
             <ShoppingBag className="size-5" />

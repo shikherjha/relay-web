@@ -29,10 +29,13 @@ function fmtDate(d?: string | null) {
 function OrdersPage() {
   const trigger = useSmileNavigate();
   const qc = useQueryClient();
-  const { data: orders = [], isLoading } = useQuery({
+  const { data: allOrders = [], isLoading } = useQuery({
     queryKey: ["orders"],
     queryFn: () => getOrders([]),
   });
+  // Amazon (Layer-1) orders only — Second-Life / Rescue checkouts live in the
+  // Relay dashboard, not the Amazon order list.
+  const orders = allOrders.filter((o) => o.source !== "relay");
 
   return (
     <div className="mx-auto max-w-[1100px] px-6 py-8">
@@ -53,7 +56,7 @@ function OrdersPage() {
 
       <div className="mt-6 space-y-4">
         {orders.map((o, oi) => {
-          const total = o.total ?? o.items.reduce((s, it) => s + it.price, 0);
+          const total = o.total ?? o.subtotal ?? o.items.reduce((s, it) => s + it.price, 0);
           return (
             <motion.div
               key={o.id}
@@ -66,7 +69,7 @@ function OrdersPage() {
                 <div>
                   <div>Order placed</div>
                   <div className="text-foreground normal-case tracking-normal text-sm mt-0.5 tabular">
-                    {fmtDate(o.created_at)}
+                    {fmtDate(o.placed_at ?? o.created_at)}
                   </div>
                 </div>
                 <div>

@@ -155,7 +155,7 @@ function AmazonPDP() {
               <span>
                 You've added {distinct} sizes of this item. Most multi-size orders end in a return —
                 keep the one that fits.{" "}
-                <Link to="/cart" className="text-primary hover:underline">
+                <Link to="/amazon/cart" className="text-primary hover:underline">
                   Review cart →
                 </Link>
               </span>
@@ -170,7 +170,7 @@ function AmazonPDP() {
             Add to bag
           </button>
           <Link
-            to="/cart"
+            to="/amazon/cart"
             className="block text-center w-full py-2.5 rounded-full text-sm font-medium"
             style={{ background: "#FFA41C", color: "#0F1111" }}
           >

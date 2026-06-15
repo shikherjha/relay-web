@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import {
   MapPin,
   Check,
-  ShieldAlert,
   ArrowLeftRight,
   Zap,
   Lock,
@@ -11,6 +10,7 @@ import {
   Truck,
   ShieldCheck,
   Sparkles,
+  ShoppingBag,
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -19,7 +19,6 @@ import { GradeBadge } from "@/components/relay/GradeBadge";
 import { DecayClock } from "@/components/relay/DecayClock";
 import { useRelay } from "@/lib/store";
 import {
-  claimRescue,
   getImpact,
   getRescueFeed,
   walletEarlyAccess,
@@ -93,8 +92,10 @@ function PathBadge({ r }: { r: RescueListingDTO }) {
 }
 
 function Rescue() {
-  const { claimed, claim, addImpact, userId } = useRelay();
-  const [blocked, setBlocked] = useState<Record<string, string[]>>({});
+  const userId = useRelay((s) => s.userId);
+  const relayCart = useRelay((s) => s.relayCart);
+  const addToRelayCart = useRelay((s) => s.addToRelayCart);
+  const removeFromRelayCart = useRelay((s) => s.removeFromRelayCart);
   const [scope, setScope] = useState<RescueScope>("all");
 
   // Pillar 5: green credits buy early access. The tier + embargoed-listing
@@ -111,21 +112,6 @@ function Rescue() {
   const earlyAccess = walletEarlyAccess(wallet);
   const tierName = wallet.tier ?? (earlyAccess ? "silver" : "standard");
   const embargoedCount = live.filter((l) => l.early_access).length;
-
-  const onClaim = async (id: string) => {
-    try {
-      const res = await claimRescue(id);
-      if (!res.claimed) {
-        setBlocked((b) => ({ ...b, [id]: res.guardrails_applied }));
-        return;
-      }
-      claim(id);
-      addImpact(2.4, 0);
-    } catch (e) {
-      console.error(e);
-      setBlocked((b) => ({ ...b, [id]: ["API unavailable"] }));
-    }
-  };
 
   return (
     <div className="mx-auto max-w-[1200px] px-6 py-12">
@@ -227,15 +213,28 @@ function Rescue() {
           </p>
         )}
         {live.map((r, i) => {
-          const isClaimed = claimed.includes(r.id) || r.status === "claimed";
-          const guardrails = blocked[r.id];
+          const inCart = relayCart.some((c) => c.listingId === r.id);
           const basePct = pctFraction(r.base_discount_pct);
           const curPct = pctFraction(r.current_discount_pct);
           const orig = r.original_price ?? 1999;
           const currentPrice = Math.round(orig * (1 - curPct / 100));
+          const listPrice = r.list_price ?? currentPrice;
           const ttl = r.ttl_seconds ?? 3600;
           const maxPct = pctFraction(r.max_discount_pct ?? 0.45);
           const pickupAnchored = r.pickup_anchored && r.scope !== "national";
+          const addToCart = () =>
+            addToRelayCart({
+              kind: "rescue",
+              listingId: r.id,
+              unitId: r.unit_id,
+              title: r.title ?? "Rescue listing",
+              imageUrl: null,
+              category: r.category,
+              vertical: r.vertical,
+              price: listPrice,
+              grade: r.grade,
+              ships: r.scope === "national" || Boolean(r.ships),
+            });
           return (
             <motion.div
               key={r.id}
@@ -302,41 +301,34 @@ function Rescue() {
                 >
                   View on-chain history →
                 </Link>
-                <button
-                  disabled={isClaimed}
-                  onClick={() => onClaim(r.id)}
-                  className={`mt-4 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-[0.98] ${
-                    isClaimed
-                      ? "bg-secondary text-muted-foreground cursor-default"
-                      : guardrails
-                        ? "bg-secondary text-muted-foreground"
-                        : "bg-primary text-primary-foreground hover:bg-[var(--color-relay-hover)]"
-                  }`}
-                >
-                  {isClaimed ? (
-                    <span className="inline-flex items-center gap-1.5">
-                      <Check className="size-4" /> Claimed
-                    </span>
-                  ) : r.scope === "national" || r.ships ? (
-                    "Claim · ship to me"
-                  ) : (
-                    "Claim · keep it local"
-                  )}
-                </button>
-                {guardrails && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    className="mt-2 text-xs text-muted-foreground rounded-lg px-3 py-2"
-                    style={{
-                      background: "color-mix(in oklab, var(--color-signal) 12%, transparent)",
-                    }}
+                {inCart ? (
+                  <div className="mt-4 flex items-center gap-2">
+                    <Link
+                      to="/relay-cart"
+                      className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-[0.98] inline-flex items-center justify-center gap-1.5"
+                      style={{
+                        background: "color-mix(in oklab, var(--color-relay) 12%, transparent)",
+                        color: "var(--color-relay)",
+                      }}
+                    >
+                      <Check className="size-4" /> In cart · review
+                    </Link>
+                    <button
+                      onClick={() => removeFromRelayCart(r.id)}
+                      aria-label={`Remove ${r.title ?? "listing"} from cart`}
+                      className="py-2.5 px-3 rounded-xl text-sm text-muted-foreground border border-border hover:bg-secondary transition"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={addToCart}
+                    className="mt-4 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-[0.98] bg-primary text-primary-foreground hover:bg-[var(--color-relay-hover)] inline-flex items-center justify-center gap-1.5"
                   >
-                    <div className="inline-flex items-center gap-1.5 font-medium">
-                      <ShieldAlert className="size-3" /> Not eligible right now
-                    </div>
-                    <div className="mt-1">{guardrails.join(" · ")}</div>
-                  </motion.div>
+                    <ShoppingBag className="size-4" />
+                    {r.scope === "national" || r.ships ? "Add to cart · ship to me" : "Add to cart · pickup"}
+                  </button>
                 )}
               </div>
             </motion.div>

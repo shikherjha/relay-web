@@ -51,6 +51,8 @@ export type OrderItemDTO = {
   unit_id?: string | null;
   title: string;
   category?: string | null;
+  vertical?: string | null;
+  image_url?: string | null;
   size?: string | null;
   price: number;
   returnable: boolean;
@@ -71,8 +73,12 @@ export type OrderDTO = {
   id: string;
   user_id?: string | null;
   created_at?: string | null;
+  placed_at?: string | null;
   status?: string | null;
+  // "amazon" = Layer-1 new-product order; "relay" = Second-Life / Rescue checkout.
+  source?: string | null;
   total?: number | null;
+  subtotal?: number | null;
   items: OrderItemDTO[];
 };
 
@@ -166,6 +172,7 @@ export type ResaleListing = {
   unit_id: string;
   source: ResaleSource;
   title: string;
+  brand?: string | null;
   category: string;
   vertical: string;
   // Catalogue image (absolute https S3 URL from the order/product).
@@ -333,6 +340,10 @@ export type LedgerVerifyDTO = {
   passport_hash?: string | null;
   on_chain_hash?: string | null;
   tx_hash?: string | null;
+  // Real-chain anchoring context (present when USE_REAL_LEDGER is on).
+  on_chain?: boolean;
+  network?: string | null;
+  explorer_url?: string | null;
   events: {
     event_type: string;
     tx_hash?: string | null;
@@ -340,6 +351,7 @@ export type LedgerVerifyDTO = {
     actor?: string | null;
     location?: string | null;
     note?: string | null;
+    explorer_url?: string | null;
   }[];
   // Product context + imagery (catalogue + every user-uploaded condition shot).
   title?: string | null;
@@ -418,6 +430,19 @@ export const checkout = (body?: {
   geo?: { lat: number; lng: number };
   clear_cart?: boolean;
 }) => api<OrderDTO>("/orders/checkout", { method: "POST", json: body ?? {} });
+
+/** One line in a Relay (resale) checkout — a Second-Life or Rescue listing id. */
+export type RelayCheckoutItem = { kind: "second_life" | "rescue"; listing_id: string };
+
+/**
+ * Mock checkout for the Relay cart: buys the chosen Second-Life listings and
+ * claims the chosen Rescue listings, then records one Relay order the buyer can
+ * track in their dashboard.
+ */
+export const relayCheckout = (
+  items: RelayCheckoutItem[],
+  geo: { lat: number; lng: number } = DEMO_GEO,
+) => api<OrderDTO>("/orders/relay-checkout", { method: "POST", json: { items, geo } });
 
 export const getImpact = (fallback: ImpactWalletDTO) =>
   withFallback(api<ImpactWalletDTO>("/users/me/impact"), fallback);

@@ -18,6 +18,7 @@ import {
   PackageCheck,
   Package,
   Camera,
+  ExternalLink,
 } from "lucide-react";
 import { useState } from "react";
 import { passports } from "@/lib/mock-data";
@@ -160,10 +161,27 @@ function LedgerPage() {
                 {verify.verified ? "Verified Authentic" : "Tampered record"}
               </div>
               <div className="text-[11px] text-muted-foreground">
-                {verify.events.length} blocks · Polygon · Public
+                {verify.events.length} blocks ·{" "}
+                {verify.on_chain ? `${verify.network ?? "Chain"} · on-chain` : "Polygon · demo anchor"}
               </div>
             </div>
           </motion.div>
+
+          {verify.on_chain && verify.explorer_url && (
+            <a
+              href={verify.explorer_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 w-full inline-flex items-center justify-center gap-1.5 text-xs font-medium rounded-xl px-3 py-2 transition hover:opacity-90"
+              style={{
+                background: "color-mix(in oklab, var(--color-primary) 10%, transparent)",
+                color: "var(--color-relay)",
+              }}
+            >
+              <ShieldCheck className="size-3.5" /> Anchored on {verify.network ?? "chain"} · view tx
+              <ExternalLink className="size-3" />
+            </a>
+          )}
 
           {passportHash && (
             <button
@@ -246,7 +264,20 @@ function LedgerPage() {
                           {e.note && (
                             <div className="text-sm mt-2 text-foreground/80">{e.note}</div>
                           )}
-                          {e.tx_hash && <CopyHash hash={e.tx_hash} />}
+                          <div className="flex items-center gap-3 flex-wrap">
+                            {e.tx_hash && <CopyHash hash={e.tx_hash} />}
+                            {e.explorer_url && (
+                              <a
+                                href={e.explorer_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(ev) => ev.stopPropagation()}
+                                className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                              >
+                                PolygonScan <ExternalLink className="size-3" />
+                              </a>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
