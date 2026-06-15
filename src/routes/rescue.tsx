@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import {
   MapPin,
@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { categoryImage, pctFraction } from "@/lib/demo-constants";
+import { pctFraction, productImage } from "@/lib/demo-constants";
 import { GradeBadge } from "@/components/relay/GradeBadge";
 import { DecayClock } from "@/components/relay/DecayClock";
 import { useRelay } from "@/lib/store";
@@ -97,6 +97,7 @@ function Rescue() {
   const addToRelayCart = useRelay((s) => s.addToRelayCart);
   const removeFromRelayCart = useRelay((s) => s.removeFromRelayCart);
   const [scope, setScope] = useState<RescueScope>("all");
+  const navigate = useNavigate();
 
   // Pillar 5: green credits buy early access. The tier + embargoed-listing
   // count come live from the backend; the visuals fall back to demo data.
@@ -112,6 +113,19 @@ function Rescue() {
   const earlyAccess = walletEarlyAccess(wallet);
   const tierName = wallet.tier ?? (earlyAccess ? "silver" : "standard");
   const embargoedCount = live.filter((l) => l.early_access).length;
+
+  // Most-recent return on top: `returned_at` is the true time the unit was
+  // returned, so a just-returned item (e.g. the MacBook) surfaces first across
+  // all scopes. Listings with no return context fall back to `expires_at`, then 0.
+  const sorted = [...live].sort((a, b) => {
+    const key = (r: RescueListingDTO) =>
+      r.returned_at
+        ? new Date(r.returned_at).getTime()
+        : r.expires_at
+          ? new Date(r.expires_at).getTime()
+          : 0;
+    return key(b) - key(a);
+  });
 
   return (
     <div className="mx-auto max-w-[1200px] px-6 py-12">
@@ -212,28 +226,35 @@ function Rescue() {
             No listings in this scope — try a different scope, or check back soon.
           </p>
         )}
-        {live.map((r, i) => {
+        {sorted.map((r, i) => {
           const inCart = relayCart.some((c) => c.listingId === r.id);
           const basePct = pctFraction(r.base_discount_pct);
           const curPct = pctFraction(r.current_discount_pct);
           const orig = r.original_price ?? 1999;
           const currentPrice = Math.round(orig * (1 - curPct / 100));
           const listPrice = r.list_price ?? currentPrice;
-          const ttl = r.ttl_seconds ?? 3600;
+          const ttl = r.ttl_seconds ?? 0;
           const maxPct = pctFraction(r.max_discount_pct ?? 0.45);
+          const ships = r.scope === "national" || Boolean(r.ships);
           const pickupAnchored = r.pickup_anchored && r.scope !== "national";
+          // Time-decay clock only for local pickup listings that actually carry a
+          // TTL + expiry. National / shipped relists have no decay (was wrongly
+          // showing a bogus 60-min fallback clock).
+          const showClock = !ships && ttl > 0 && Boolean(r.expires_at);
+          const openProduct = () => navigate({ to: "/ledger/$unitId", params: { unitId: r.unit_id } });
+          const stop = (e: { stopPropagation: () => void }) => e.stopPropagation();
           const addToCart = () =>
             addToRelayCart({
               kind: "rescue",
               listingId: r.id,
               unitId: r.unit_id,
               title: r.title ?? "Rescue listing",
-              imageUrl: null,
+              imageUrl: r.image_url ?? null,
               category: r.category,
               vertical: r.vertical,
               price: listPrice,
               grade: r.grade,
-              ships: r.scope === "national" || Boolean(r.ships),
+              ships,
             });
           return (
             <motion.div
@@ -242,11 +263,21 @@ function Rescue() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.06, type: "spring", stiffness: 140, damping: 22 }}
               whileHover={{ y: -3 }}
-              className="card-soft overflow-hidden flex flex-col"
+              onClick={openProduct}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  openProduct();
+                }
+              }}
+              role="link"
+              tabIndex={0}
+              aria-label={`Open ${r.title ?? "rescue listing"}`}
+              className="card-soft overflow-hidden flex flex-col cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               <div className="relative aspect-[4/3] bg-secondary">
                 <img
-                  src={categoryImage(r.category, r.vertical)}
+                  src={productImage(r.image_url, r.category, r.vertical)}
                   alt={r.title ?? ""}
                   className="w-full h-full object-cover"
                 />
@@ -276,9 +307,20 @@ function Rescue() {
                   <MapPin className="size-3" />{" "}
                   {r.distance_km != null ? `${r.distance_km} km` : "ships"} · {r.reason ?? "return"}
                 </div>
-                <div className="mt-3">
-                  <DecayClock ttlSeconds={ttl} baseDiscountPct={basePct} maxDiscountPct={maxPct} />
-                </div>
+                {showClock ? (
+                  <div className="mt-3">
+                    <DecayClock
+                      ttlSeconds={ttl}
+                      expiresAt={r.expires_at}
+                      baseDiscountPct={basePct}
+                      maxDiscountPct={maxPct}
+                    />
+                  </div>
+                ) : ships ? (
+                  <div className="mt-3 inline-flex items-center gap-1.5 text-[11px] text-muted-foreground rounded-lg border border-border px-2.5 py-1.5">
+                    <Truck className="size-3" /> Ships to you · fixed price (no time decay)
+                  </div>
+                ) : null}
                 <div className="flex items-baseline gap-2 mt-3">
                   <div className="font-display text-xl tabular">
                     ₹{(r.list_price ?? currentPrice).toLocaleString("en-IN")}
@@ -297,6 +339,7 @@ function Rescue() {
                 <Link
                   to="/ledger/$unitId"
                   params={{ unitId: r.unit_id }}
+                  onClick={stop}
                   className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
                 >
                   View on-chain history →
@@ -305,6 +348,7 @@ function Rescue() {
                   <div className="mt-4 flex items-center gap-2">
                     <Link
                       to="/relay-cart"
+                      onClick={stop}
                       className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-[0.98] inline-flex items-center justify-center gap-1.5"
                       style={{
                         background: "color-mix(in oklab, var(--color-relay) 12%, transparent)",
@@ -314,7 +358,10 @@ function Rescue() {
                       <Check className="size-4" /> In cart · review
                     </Link>
                     <button
-                      onClick={() => removeFromRelayCart(r.id)}
+                      onClick={(e) => {
+                        stop(e);
+                        removeFromRelayCart(r.id);
+                      }}
                       aria-label={`Remove ${r.title ?? "listing"} from cart`}
                       className="py-2.5 px-3 rounded-xl text-sm text-muted-foreground border border-border hover:bg-secondary transition"
                     >
@@ -323,11 +370,14 @@ function Rescue() {
                   </div>
                 ) : (
                   <button
-                    onClick={addToCart}
+                    onClick={(e) => {
+                      stop(e);
+                      addToCart();
+                    }}
                     className="mt-4 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-[0.98] bg-primary text-primary-foreground hover:bg-[var(--color-relay-hover)] inline-flex items-center justify-center gap-1.5"
                   >
                     <ShoppingBag className="size-4" />
-                    {r.scope === "national" || r.ships ? "Add to cart · ship to me" : "Add to cart · pickup"}
+                    {ships ? "Add to cart · ship to me" : "Add to cart · pickup"}
                   </button>
                 )}
               </div>

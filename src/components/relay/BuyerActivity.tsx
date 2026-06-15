@@ -285,7 +285,13 @@ export function BuyerActivity({ defaultTab }: { defaultTab?: string } = {}) {
                           />
                         </Link>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium line-clamp-1">{it.title}</div>
+                          <Link
+                            to="/ledger/$unitId"
+                            params={{ unitId: it.unit_id ?? it.id }}
+                            className="text-sm font-medium line-clamp-1 hover:text-primary transition-colors"
+                          >
+                            {it.title}
+                          </Link>
                           <div className="text-xs text-muted-foreground tabular">
                             {it.price != null ? inr(it.price) : ""}
                             {it.size ? ` · size ${it.size}` : ""}

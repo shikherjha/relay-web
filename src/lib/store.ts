@@ -40,6 +40,15 @@ export function tierFor(credits: number): {
 
 export type CartLine = { productId: string; size: string };
 
+/** A wish the buyer just posted (kept client-side for instant "wish added" feedback). */
+export type MyWish = {
+  id: string;
+  category: string;
+  size?: string | null;
+  budget?: number | null;
+  createdAt: number;
+};
+
 /**
  * A Relay (Layer-2) cart line — a Second-Life listing or a Rescue listing the
  * buyer has staged for checkout. Distinct from the Amazon Layer-1 product cart:
@@ -87,6 +96,11 @@ type Store = {
   // Genie (reverse wishlist) — locally dismissed wishes.
   droppedWishes: string[];
   dropWish: (id: string) => void;
+  // Genie — wishes the user just posted, so "wish added" is visible immediately
+  // (the backend has no list endpoint; matches arrive async via /wishlist/matches).
+  myWishes: MyWish[];
+  addMyWish: (w: MyWish) => void;
+  removeMyWish: (id: string) => void;
   // Smile transition between Layer-1 (Amazon) and Relay (second-life).
   transitioning: boolean;
   setTransitioning: (v: boolean) => void;
@@ -135,6 +149,10 @@ export const useRelay = create<Store>((set) => ({
   clearRelayCart: () => set({ relayCart: [] }),
   droppedWishes: [],
   dropWish: (id) => set((s) => ({ droppedWishes: [...s.droppedWishes, id] })),
+  myWishes: [],
+  addMyWish: (w) =>
+    set((s) => ({ myWishes: [w, ...s.myWishes.filter((x) => x.id !== w.id)].slice(0, 8) })),
+  removeMyWish: (id) => set((s) => ({ myWishes: s.myWishes.filter((x) => x.id !== id) })),
   transitioning: false,
   setTransitioning: (v) => set({ transitioning: v }),
 }));

@@ -19,15 +19,24 @@ import {
   Package,
   Camera,
   ExternalLink,
+  Truck,
 } from "lucide-react";
 import { useState } from "react";
 import { passports } from "@/lib/mock-data";
 import { ledgerVerify, type LedgerEventType } from "@/lib/mock-extra";
 import { api, withFallback } from "@/lib/api";
-import { productImage } from "@/lib/demo-constants";
-import type { LedgerVerifyDTO } from "@/lib/relay-api";
+import { productImage, pctFraction } from "@/lib/demo-constants";
+import {
+  getRescueFeed,
+  getSecondLife,
+  type LedgerVerifyDTO,
+  type RescueListingDTO,
+  type ResaleListing,
+} from "@/lib/relay-api";
+import { useRelay } from "@/lib/store";
 import { GradeBadge } from "@/components/relay/GradeBadge";
 import { ConditionPassport } from "@/components/relay/ConditionPassport";
+import { DecayClock } from "@/components/relay/DecayClock";
 import { Fingerprint } from "@/components/relay/Fingerprint";
 import { QRBlock } from "@/components/relay/QRBlock";
 
@@ -71,6 +80,26 @@ function LedgerPage() {
   const verify = data ?? fallback;
   const passport = verify.passport ?? passports.find((p) => p.unitId === unitId);
   const passportHash = verify.passport_hash ?? "";
+
+  // Is this unit currently buyable? Cross-reference the live Second-Life + Rescue
+  // feeds so the provenance page doubles as a product page (price · cart · timer).
+  const relayCart = useRelay((s) => s.relayCart);
+  const addToRelayCart = useRelay((s) => s.addToRelayCart);
+  const { data: secondLife = [] } = useQuery({
+    queryKey: ["second-life", "ledger"],
+    queryFn: () => getSecondLife({ fallback: [] }),
+  });
+  const { data: rescueFeed = [] } = useQuery({
+    queryKey: ["rescue-feed", "all", "ledger"],
+    queryFn: () => getRescueFeed(undefined, { scope: "all", fallback: [] }),
+  });
+  const listing = resolveListing(unitId, secondLife, rescueFeed);
+  const rescueClock =
+    listing && listing.kind === "rescue" && !listing.ships && listing.ttl > 0 && listing.expiresAt
+      ? listing
+      : null;
+  const inCart = Boolean(listing && relayCart.some((c) => c.listingId === listing.listingId));
+  const metaDescription = buildDescription(verify, passport?.grade ?? listing?.grade, listing?.ships);
   const shareUrl =
     typeof window !== "undefined"
       ? `${window.location.origin}/ledger/${unitId}`
@@ -111,6 +140,85 @@ function LedgerPage() {
         catalog={productImage(verify.image_url, verify.category, verify.vertical)}
         media={verify.media_urls ?? []}
       />
+
+      {/* About + buy panel — provenance page doubles as the product page. */}
+      <div className="mt-6 card-soft p-5 grid md:grid-cols-[1fr_auto] gap-5 md:items-center">
+        <div className="min-w-0">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            About this item
+          </div>
+          <p className="text-sm text-foreground/80 mt-1.5 max-w-xl">{metaDescription}</p>
+          {rescueClock && (
+            <div className="mt-3 max-w-sm">
+              <DecayClock
+                ttlSeconds={rescueClock.ttl}
+                expiresAt={rescueClock.expiresAt}
+                baseDiscountPct={rescueClock.basePct}
+                maxDiscountPct={rescueClock.maxPct}
+              />
+            </div>
+          )}
+          {listing?.kind === "rescue" && listing.ships && (
+            <div className="mt-3 inline-flex items-center gap-1.5 text-[11px] text-muted-foreground rounded-lg border border-border px-2.5 py-1.5">
+              <Truck className="size-3" /> Ships to you · fixed price (no time decay)
+            </div>
+          )}
+        </div>
+
+        {listing && listing.price != null && (
+          <div className="md:text-right shrink-0">
+            <div className="flex md:justify-end items-baseline gap-2">
+              <div className="font-display text-2xl tabular">
+                ₹{listing.price.toLocaleString("en-IN")}
+              </div>
+              {listing.original != null && listing.original > listing.price && (
+                <div className="text-xs text-muted-foreground line-through tabular">
+                  ₹{listing.original.toLocaleString("en-IN")}
+                </div>
+              )}
+            </div>
+            {listing.priceRange && (
+              <div className="text-[11px] text-muted-foreground mt-0.5">
+                AI-priced · ₹{listing.priceRange.min.toLocaleString("en-IN")}–₹
+                {listing.priceRange.max.toLocaleString("en-IN")}
+              </div>
+            )}
+            {inCart ? (
+              <Link
+                to="/relay-cart"
+                className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-xl px-5 py-2.5 text-sm font-medium"
+                style={{
+                  background: "color-mix(in oklab, var(--color-relay) 12%, transparent)",
+                  color: "var(--color-relay)",
+                }}
+              >
+                <Check className="size-4" /> In cart · review
+              </Link>
+            ) : (
+              <button
+                onClick={() =>
+                  addToRelayCart({
+                    kind: listing.kind,
+                    listingId: listing.listingId,
+                    unitId,
+                    title: listing.title ?? verify.title ?? "Listing",
+                    imageUrl: listing.imageUrl ?? verify.image_url ?? null,
+                    category: listing.category ?? verify.category,
+                    vertical: listing.vertical ?? verify.vertical,
+                    price: listing.price!,
+                    grade: listing.grade,
+                    ships: listing.ships,
+                    source: listing.source,
+                  })
+                }
+                className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-xl px-5 py-2.5 text-sm font-medium bg-primary text-primary-foreground hover:bg-[var(--color-relay-hover)] transition active:scale-[0.98]"
+              >
+                <ShoppingBag className="size-4" /> Add to cart{listing.ships ? " · ship to me" : " · pickup"}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       <div className="grid lg:grid-cols-[420px_1fr] gap-8 mt-10">
         {/* LEFT — fingerprint + verified + QR */}
@@ -353,6 +461,92 @@ function ProductGallery({ catalog, media }: { catalog: string; media: string[] }
       )}
     </div>
   );
+}
+
+type BuyListing = {
+  kind: "second_life" | "rescue";
+  listingId: string;
+  price: number | null;
+  original: number | null;
+  ships: boolean;
+  grade?: string | null;
+  title?: string | null;
+  category?: string | null;
+  vertical?: string | null;
+  imageUrl?: string | null;
+  source?: string | null;
+  priceRange?: { min: number; max: number } | null;
+  ttl: number;
+  expiresAt?: string | null;
+  basePct: number;
+  maxPct: number;
+};
+
+/** Find an active Second-Life (preferred) or Rescue listing for this unit. */
+function resolveListing(
+  unitId: string,
+  secondLife: ResaleListing[],
+  rescueFeed: RescueListingDTO[],
+): BuyListing | null {
+  const sl = secondLife.find((l) => l.unit_id === unitId);
+  if (sl) {
+    return {
+      kind: "second_life",
+      listingId: sl.id,
+      price: sl.list_price,
+      original: sl.original_price,
+      ships: Boolean(sl.ships),
+      grade: sl.resale_grade,
+      title: sl.title,
+      category: sl.category,
+      vertical: sl.vertical,
+      imageUrl: sl.image_url,
+      source: sl.source,
+      priceRange: sl.price_range,
+      ttl: 0,
+      expiresAt: null,
+      basePct: 0,
+      maxPct: 0,
+    };
+  }
+  const r = rescueFeed.find((x) => x.unit_id === unitId && x.status === "active");
+  if (r) {
+    const orig = r.original_price ?? null;
+    const curPct = pctFraction(r.current_discount_pct);
+    const price = r.list_price ?? (orig != null ? Math.round(orig * (1 - curPct / 100)) : null);
+    return {
+      kind: "rescue",
+      listingId: r.id,
+      price,
+      original: orig,
+      ships: r.scope === "national" || Boolean(r.ships),
+      grade: r.grade,
+      title: r.title,
+      category: r.category,
+      vertical: r.vertical,
+      imageUrl: null,
+      source: null,
+      priceRange: r.price_range ?? null,
+      ttl: r.ttl_seconds ?? 0,
+      expiresAt: r.expires_at,
+      basePct: pctFraction(r.base_discount_pct),
+      maxPct: pctFraction(r.max_discount_pct ?? 0.45),
+    };
+  }
+  return null;
+}
+
+/** A short, human meta-description for the product page (no extra API call). */
+function buildDescription(
+  verify: { category?: string | null; vertical?: string | null; events?: unknown[] },
+  grade?: string | null,
+  ships?: boolean,
+): string {
+  const catPhrase = [verify.category, verify.vertical].filter(Boolean).join(" · ") || "item";
+  const events = verify.events?.length ?? 0;
+  const gradePhrase = grade ? `Grade ${grade} · ` : "";
+  const fulfil = ships ? "Ships to you." : "Available for local pickup near you.";
+  return `${gradePhrase}${catPhrase}. Inspected and graded by Relay AI, with ${events} verified event${events === 1 ? "" : "s"} on the LifeLedger condition passport. ${fulfil}`;
 }
 
 function CopyHash({ hash }: { hash: string }) {

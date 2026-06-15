@@ -1,4 +1,4 @@
-import { api, uploadFiles, uploadReturnMedia, uploadReturnMediaFiles, withFallback } from "./api";
+import { api, del, uploadFiles, uploadReturnMedia, uploadReturnMediaFiles, withFallback } from "./api";
 import { DEMO_GEO } from "./demo-constants";
 import type { Grade, Passport, PassportVerification } from "./mock-data";
 import { categoryImage } from "./demo-constants";
@@ -130,6 +130,9 @@ export type RescueListingDTO = {
   title?: string | null;
   category?: string | null;
   vertical?: string | null;
+  // Real catalogue image (S3 URL) + when the unit was most recently returned.
+  image_url?: string | null;
+  returned_at?: string | null;
   original_price?: number | null;
   grade?: string | null;
   reason?: string | null;
@@ -153,6 +156,8 @@ export type WishMatchDTO = {
   distance_km: number | null;
   title?: string | null;
   category?: string | null;
+  vertical?: string | null;
+  image_url?: string | null;
   grade?: string | null;
   price?: number | null;
   scope?: "local" | "national" | string | null;
@@ -527,6 +532,22 @@ export const relistSellerUnit = (unitId: string, files: Blob[]) =>
 export const postWish = (body: { category: string; size?: string; max_price?: number }) =>
   api<{ id: string; wish_score?: number | null }>("/wishlist", { method: "POST", json: body });
 
+/** A persisted wish (source of truth for Genie's "Your wishes", survives reload). */
+export type WishlistDTO = {
+  id: string;
+  user_id: string;
+  category: string;
+  size?: string | null;
+  max_price?: number | null;
+  expires_at?: string | null;
+  wish_score?: number | null;
+};
+
+export const getWishes = (fallback: WishlistDTO[] = []) =>
+  withFallback(api<WishlistDTO[]>("/wishlist"), fallback);
+
+export const deleteWish = (wishId: string) => del(`/wishlist/${wishId}`);
+
 export const getPairMatches = (fallback: PairMatchDTO[] = []) =>
   withFallback(api<PairMatchDTO[]>("/rescue/pair-matches?radius_km=15"), fallback);
 
@@ -578,14 +599,20 @@ export const claimRescue = (listingId: string) =>
 
 // ---- Mappers ----
 
-export function apiPassportToUi(p: ApiPassport, title: string): Passport {
+export function apiPassportToUi(
+  p: ApiPassport,
+  title: string,
+  image?: string | null,
+): Passport {
   const sevMap: Record<string, 1 | 2 | 3> = { minor: 1, moderate: 2, major: 3 };
   return {
     id: p.return_id ?? p.unit_id,
     unitId: p.unit_id,
     itemName: title,
     category: `${p.vertical} · ${p.category ?? "item"}`,
-    thumbnail: categoryImage(p.category, p.vertical),
+    // Prefer the real condition photo the buyer uploaded (or the product's S3
+    // image) — fall back to the deterministic category image only as a last resort.
+    thumbnail: image && image.trim() ? image : categoryImage(p.category, p.vertical),
     grade: p.grade,
     confidence: Math.round(p.confidence * 100),
     packaging:

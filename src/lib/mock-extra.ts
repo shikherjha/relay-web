@@ -28,6 +28,9 @@ export function ledgerVerify(unitId: string) {
     location: e.location,
     note: e.note,
     kind: e.kind,
+    // Present on the live API event shape (LedgerVerifyDTO); null in the mock so
+    // the intersected LedgerData type exposes it for the timeline's PolygonScan link.
+    explorer_url: null as string | null,
   }));
   const passport = passports.find((p) => p.unitId === unitId);
   return {

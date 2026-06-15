@@ -22,7 +22,7 @@ import {
 import { channels } from "@/lib/mock-data";
 import { ConditionPassport } from "@/components/relay/ConditionPassport";
 import { channelMeta, type DispositionChannel } from "@/lib/mock-extra";
-import { HERO_HOODIE_UNIT_ID, categoryImage } from "@/lib/demo-constants";
+import { HERO_HOODIE_UNIT_ID, productImage } from "@/lib/demo-constants";
 import {
   apiPassportToUi,
   computeDisposition,
@@ -152,7 +152,9 @@ function ReturnsPage() {
       const blobs = await Promise.all(photos.map((src) => fetch(src).then((r) => r.blob())));
       if (blobs.length) await uploadReturnMediaFiles(created.id, blobs);
       const p = await getReturnPassport(created.id);
-      setPassport(apiPassportToUi(p, itemTitle));
+      // The Condition Passport should show the actual item — the buyer's first
+      // uploaded angle, falling back to the product's real S3 image.
+      setPassport(apiPassportToUi(p, itemTitle, photos[0] ?? orderItem?.image_url));
       setGrading(false);
     } catch (e) {
       setGrading(false);
@@ -205,7 +207,7 @@ function ReturnsPage() {
       {orderItem ? (
         <div className="mt-5 card-soft p-4 flex items-center gap-4">
           <img
-            src={categoryImage(orderItem.category)}
+            src={productImage(orderItem.image_url, orderItem.category, orderItem.vertical)}
             alt=""
             className="size-14 rounded-lg object-cover bg-secondary"
           />
