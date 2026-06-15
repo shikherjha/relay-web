@@ -45,13 +45,28 @@ export function categoryImage(category?: string | null, vertical?: string | null
 /**
  * Prefer a real product/listing `image_url` from the API; gracefully fall back
  * to the deterministic category image when it's null/blank.
+ *
+ * - Absolute URLs (S3/CDN, http/https) are used as-is.
+ * - Server-relative paths (e.g. "/static/products/x.jpg") are resolved against
+ *   the API origin, which is the service that actually serves those files
+ *   (otherwise the browser would request them from the web origin and 404).
  */
+const IMG_API_BASE = (
+  (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_API_URL ??
+  "http://127.0.0.1:8010"
+).replace(/\/$/, "");
+
 export function productImage(
   imageUrl?: string | null,
   category?: string | null,
   vertical?: string | null,
 ): string {
-  if (imageUrl && imageUrl.trim()) return imageUrl;
+  const u = imageUrl?.trim();
+  if (u) {
+    if (/^https?:\/\//i.test(u)) return u;
+    if (u.startsWith("/")) return `${IMG_API_BASE}${u}`;
+    return u;
+  }
   return categoryImage(category, vertical);
 }
 
