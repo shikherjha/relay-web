@@ -32,14 +32,75 @@ export const CATEGORY_IMAGES: Record<string, string> = {
   sunglasses: img("1511499767150-a48a237f0083", 19),
   keyboard: img("1587829741301-dc798b83add3", 20),
   coat: img("1539533018447-63fcce2678e3", 21),
-  fashion: img("1542272604-787c3835535d", 1),
+  // catalog categories that previously fell through to the fashion default
+  // (which is jeans) — give each its own correct image.
+  laptop: img("1496181133206-80ce9b88a853", 22),
+  smartphone: img("1511707171634-5f897ff02aa9", 23),
+  phone: img("1511707171634-5f897ff02aa9", 23),
+  tablet: img("1544244015-0df4b3ffc6b0", 24),
+  monitor: img("1527443224154-c4a3942d3acf", 25),
+  mouse: img("1527864550417-7fd91fc51a46", 26),
+  top: img("1521572163474-6864f9cf17ab", 27),
+  shirt: img("1602810318383-e386cc2a3ccf", 28),
+  shoes: img("1542291026-7eec264c27ff", 12),
+  footwear: img("1542291026-7eec264c27ff", 12),
+  skirt: img("1583496661160-fb5886a0aaaa", 29),
+  shorts: img("1591195853828-11db59a44f6b", 30),
+  accessory: img("1511499767150-a48a237f0083", 19),
+  bag: img("1553062407-98eeb64c6a62", 16),
+  fashion: img("1521572163474-6864f9cf17ab", 3),
   electronics: img("1505740420928-5e560c06d30e", 2),
 };
 
+// Synonyms → canonical CATEGORY_IMAGES key. Keeps the fallback image correct
+// even when a product's category string is a variant (e.g. "running shoes",
+// "macbook", "t-shirt") so a shoe never shows a jeans image.
+const CATEGORY_ALIASES: Record<string, string> = {
+  "t-shirt": "tshirt",
+  tee: "tshirt",
+  "running shoes": "sneakers",
+  trainers: "sneakers",
+  shoe: "sneakers",
+  macbook: "laptop",
+  notebook: "laptop",
+  iphone: "smartphone",
+  android: "smartphone",
+  earphones: "headphones",
+  earbuds: "headphones",
+  headset: "headphones",
+  pullover: "hoodie",
+  sweatshirt: "hoodie",
+  denim: "jeans",
+  blazer: "jacket",
+  parka: "jacket",
+  gown: "dress",
+  rucksack: "backpack",
+  shades: "sunglasses",
+  eyewear: "sunglasses",
+};
+
+function normalizeCategory(category?: string | null): string | null {
+  if (!category) return null;
+  const c = category.trim().toLowerCase();
+  if (CATEGORY_IMAGES[c]) return c;
+  if (CATEGORY_ALIASES[c]) return CATEGORY_ALIASES[c];
+  // Substring match for compound categories ("men's running shoes" → sneakers).
+  for (const [alias, canon] of Object.entries(CATEGORY_ALIASES)) {
+    if (c.includes(alias)) return canon;
+  }
+  for (const key of Object.keys(CATEGORY_IMAGES)) {
+    if (key !== "fashion" && key !== "electronics" && c.includes(key)) return key;
+  }
+  return null;
+}
+
 export function categoryImage(category?: string | null, vertical?: string | null): string {
-  if (category && CATEGORY_IMAGES[category]) return CATEGORY_IMAGES[category];
+  const canon = normalizeCategory(category);
+  if (canon && CATEGORY_IMAGES[canon]) return CATEGORY_IMAGES[canon];
   if (vertical && CATEGORY_IMAGES[vertical]) return CATEGORY_IMAGES[vertical];
-  return CATEGORY_IMAGES.fashion;
+  // Last resort: a neutral apparel image for fashion, electronics image otherwise
+  // — never silently default everything to jeans.
+  return vertical === "electronics" ? CATEGORY_IMAGES.electronics : CATEGORY_IMAGES.tshirt;
 }
 
 /**
