@@ -82,9 +82,12 @@ function AmazonPDP() {
   );
   const fitMatch = confidence?.drivers?.find((d) => d.positive && d.type === "fit_confidence");
 
+  const [added, setAdded] = useState(false);
   const onAdd = () => {
     addToCart({ productId: p.id, size });
     addMut.mutate(size);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000);
   };
 
   return (
@@ -233,10 +236,10 @@ function AmazonPDP() {
 
           <button
             onClick={onAdd}
-            className="w-full py-2.5 rounded-full text-sm font-medium"
-            style={{ background: "#FFD814", color: "#0F1111" }}
+            className="w-full py-2.5 rounded-full text-sm font-medium cursor-pointer active:scale-[0.98] transition-all"
+            style={{ background: added ? "#4CAF50" : "#FFD814", color: added ? "#fff" : "#0F1111" }}
           >
-            Add to bag
+            {added ? "✓ Added to bag!" : "Add to bag"}
           </button>
           <Link
             to="/amazon/cart"
