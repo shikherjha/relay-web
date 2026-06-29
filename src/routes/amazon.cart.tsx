@@ -1,9 +1,21 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { motion, AnimatePresence } from "framer-motion";
-import { AlertTriangle, ShoppingBag, Sparkles, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
+import { ShoppingBag, Loader2, X } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { categoryImage, DEMO_GEO } from "@/lib/demo-constants";
-import { checkout, getCart, getProducts } from "@/lib/relay-api";
+import {
+  checkout,
+  deleteCartItem,
+  getCart,
+  getCartReturnConfidence,
+  getFitProfiles,
+  getProducts,
+  patchCartItem,
+} from "@/lib/relay-api";
+import type { ProductConfidenceDTO } from "@/lib/relay-api";
+import { CartLineNudge } from "@/components/relay/CartLineNudge";
+import { CartRecipientChip } from "@/components/relay/CartRecipientChip";
+import { useRelay } from "@/lib/store";
 
 export const Route = createFileRoute("/amazon/cart")({
   head: () => ({
@@ -18,83 +30,85 @@ export const Route = createFileRoute("/amazon/cart")({
 function AmazonCartPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const { userId } = useRelay();
   const { data: cart } = useQuery({
     queryKey: ["cart"],
     queryFn: () => getCart({ user_id: "", items: [], bracketing: [] }),
+  });
+  // Per-line recipients now drive scoring (no cart-wide profile param).
+  const { data: confidence } = useQuery({
+    queryKey: ["cart-confidence"],
+    queryFn: () => getCartReturnConfidence(),
   });
   const { data: products } = useQuery({
     queryKey: ["products"],
     queryFn: () => getProducts([]),
   });
+  const { data: profilesState } = useQuery({
+    queryKey: ["fit-profiles", userId],
+    queryFn: () => getFitProfiles({ active_profile: "self", profiles: [] }),
+  });
+  const profiles = profilesState?.profiles ?? [];
+
+  const invalidateCart = async () => {
+    await qc.invalidateQueries({ queryKey: ["cart"] });
+    await qc.invalidateQueries({ queryKey: ["cart-confidence"] });
+  };
 
   const checkoutMut = useMutation({
     // Empty body checks out the server cart; clears it and records an order.
     mutationFn: () => checkout({ geo: DEMO_GEO, clear_cart: true }),
     onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ["cart"] });
+      await invalidateCart();
       await qc.invalidateQueries({ queryKey: ["orders"] });
       navigate({ to: "/amazon/orders" });
     },
   });
 
-  const byId = new Map((products ?? []).map((p) => [p.id, p]));
+  const removeMut = useMutation({
+    mutationFn: (itemId: string) => deleteCartItem(itemId),
+    onSuccess: invalidateCart,
+  });
+
   const items = cart?.items ?? [];
-  const bracketing = (cart?.bracketing ?? []).filter((b) => b.flagged);
+
+  // Drop the spare sizes of a same-recipient duplicate, keeping `keepSize`.
+  const keepSizeMut = useMutation({
+    mutationFn: async ({ keepSize, lineIds }: { keepSize: string; lineIds: string[] }) => {
+      const drop = items.filter((c) => lineIds.includes(c.id) && c.size !== keepSize);
+      await Promise.all(drop.map((c) => deleteCartItem(c.id)));
+    },
+    onSuccess: invalidateCart,
+  });
+
+  // Swap a line's size (the recipient's recommended size).
+  const swapSizeMut = useMutation({
+    mutationFn: ({ itemId, size }: { itemId: string; size: string }) =>
+      patchCartItem(itemId, { size }),
+    onSuccess: invalidateCart,
+  });
+
+  // Reassign who a line is for.
+  const assignMut = useMutation({
+    mutationFn: ({ itemId, profileId }: { itemId: string; profileId: string | null }) =>
+      patchCartItem(itemId, { profile_id: profileId }),
+    onSuccess: invalidateCart,
+  });
+
+  const byId = new Map((products ?? []).map((p) => [p.id, p]));
   const total = items.reduce((sum, c) => sum + (byId.get(c.product_id)?.price ?? 0), 0);
+
+  // Confidence is now per (product × recipient): map each scored group to its
+  // cart lines so a line renders its OWN nudge, once per group (first line).
+  const confByLine = new Map<string, ProductConfidenceDTO>();
+  (confidence?.items ?? []).forEach((it) => it.line_ids.forEach((lid) => confByLine.set(lid, it)));
 
   return (
     <div className="mx-auto max-w-[900px] px-6 py-12">
-      <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Your bag</div>
-      <h1 className="font-display text-4xl mt-2">Cart</h1>
-
-      <AnimatePresence>
-        {bracketing.map((b) => {
-          const product = byId.get(b.product_id);
-          return (
-            <motion.div
-              key={b.product_id}
-              initial={{ opacity: 0, y: -8, height: 0 }}
-              animate={{ opacity: 1, y: 0, height: "auto" }}
-              exit={{ opacity: 0, y: -8, height: 0 }}
-              className="mt-6 rounded-2xl border-2 border-[var(--color-signal)]/40 bg-[color-mix(in_oklab,var(--color-signal)_10%,transparent)] p-5"
-            >
-              <div className="flex items-start gap-3">
-                <div
-                  className="size-10 rounded-full flex items-center justify-center shrink-0"
-                  style={{
-                    background: "var(--color-signal)",
-                    color: "var(--color-signal-foreground)",
-                  }}
-                >
-                  <AlertTriangle className="size-5" />
-                </div>
-                <div className="flex-1">
-                  <div
-                    className="text-xs uppercase tracking-wider font-medium"
-                    style={{ color: "var(--color-signal)" }}
-                  >
-                    Bracketing detected
-                  </div>
-                  <p className="text-sm mt-1 leading-relaxed">{b.message}</p>
-                  <div className="mt-3 flex items-center gap-2 flex-wrap">
-                    <span className="text-xs px-2 py-1 rounded-full bg-card border border-border inline-flex items-center gap-1.5">
-                      <Sparkles className="size-3" style={{ color: "var(--color-signal)" }} />{" "}
-                      Suggested size: <strong>{b.suggested_size}</strong>
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      Sizes in cart: {b.sizes.join(", ")}
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-muted-foreground mt-3">
-                    Advisory — checkout not blocked. {product?.title ?? "This item"} returns add
-                    ~2.4 kg CO₂ each.
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
-      </AnimatePresence>
+      <div>
+        <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Your bag</div>
+        <h1 className="font-display text-4xl mt-2">Cart</h1>
+      </div>
 
       <div className="mt-8 card-soft divide-y divide-border">
         {items.length === 0 && (
@@ -109,6 +123,12 @@ function AmazonCartPage() {
         {items.map((c) => {
           const product = byId.get(c.product_id);
           if (!product) return null;
+          const removing = removeMut.isPending && removeMut.variables === c.id;
+          const conf = confByLine.get(c.id);
+          const showNudge = conf && conf.line_ids[0] === c.id;
+          const lineBusy =
+            (assignMut.isPending && assignMut.variables?.itemId === c.id) ||
+            (swapSizeMut.isPending && swapSizeMut.variables?.itemId === c.id);
           return (
             <motion.div key={c.id} layout className="flex items-center gap-4 p-4">
               <img
@@ -121,11 +141,36 @@ function AmazonCartPage() {
                   {(product.metadata as { brand?: string })?.brand ?? product.sku}
                 </div>
                 <div className="text-sm font-medium">{product.title}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">Size {c.size}</div>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  {c.size && <span className="text-xs text-muted-foreground">Size {c.size}</span>}
+                  <CartRecipientChip
+                    value={c.profile_id}
+                    profiles={profiles}
+                    busy={lineBusy}
+                    onChange={(profileId) => assignMut.mutate({ itemId: c.id, profileId })}
+                  />
+                </div>
+                {showNudge && (
+                  <CartLineNudge
+                    item={conf}
+                    busy={keepSizeMut.isPending || swapSizeMut.isPending}
+                    onKeepSize={(keepSize, lineIds) => keepSizeMut.mutate({ keepSize, lineIds })}
+                    onSwapSize={(size) => swapSizeMut.mutate({ itemId: c.id, size })}
+                  />
+                )}
               </div>
               <div className="text-sm tabular font-medium">
                 ₹{product.price.toLocaleString("en-IN")}
               </div>
+              <button
+                type="button"
+                onClick={() => removeMut.mutate(c.id)}
+                disabled={removing}
+                aria-label={`Remove ${product.title} size ${c.size ?? ""}`.trim()}
+                className="size-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition shrink-0 disabled:opacity-50"
+              >
+                {removing ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}
+              </button>
             </motion.div>
           );
         })}

@@ -75,6 +75,10 @@ type Store = {
   userId: string;
   persona: Persona;
   setPersona: (persona: Persona) => void;
+  // Active Fit Profile ("who are you shopping for?"). The server is the source of
+  // truth; this mirrors it for instant UI + so fetchers can pass profile_id.
+  fitProfileId: string;
+  setFitProfileId: (id: string) => void;
   co2Kg: number;
   credits: number;
   lockedCredits: number;
@@ -122,7 +126,11 @@ export const useRelay = create<Store>((set) => ({
     set({
       persona,
       userId: persona === "seller" ? DEMO_USER_ID : BUYER_USER_ID,
+      // Different shopper → reset to their own ("self") profile.
+      fitProfileId: "self",
     }),
+  fitProfileId: "self",
+  setFitProfileId: (id) => set({ fitProfileId: id }),
   co2Kg: 0,
   credits: 0,
   lockedCredits: 0,

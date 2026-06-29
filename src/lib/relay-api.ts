@@ -32,6 +32,8 @@ export type CartDTO = {
     sku?: string | null;
     size?: string | null;
     qty: number;
+    // Who this line is for (Fit Profile id). null/"anyone" = unassigned gift.
+    profile_id?: string | null;
   }[];
   bracketing: {
     flagged: boolean;
@@ -41,6 +43,95 @@ export type CartDTO = {
     suggested_size?: string | null;
     message?: string | null;
   }[];
+};
+
+// ---- Track D · Return Confidence (prevention beyond bracketing) ----
+
+export type ConfidenceBand = "high" | "medium" | "low";
+
+export type ConfidenceDriver = {
+  type: string;
+  label: string;
+  severity: "low" | "medium" | "high";
+  positive?: boolean;
+};
+
+export type ConfidenceIntervention = {
+  type: string;
+  label: string;
+  action?: string | null; // remove_extra_sizes | add_fit_profile | review_fit | review_compatibility
+  product_id?: string | null;
+  suggested_size?: string | null;
+  // Electronics "fit-for-purpose" checklist (compatibility / specs / in-box).
+  items?: string[];
+};
+
+export type ProductConfidenceDTO = {
+  product_id: string;
+  title?: string | null;
+  size?: string | null;
+  // The cart line(s) this scored group covers (per product × recipient).
+  line_ids: string[];
+  // Who this line is for (per-line recipient). "anyone" = unassigned gift.
+  profile_id: string;
+  profile_name: string;
+  for_self: boolean;
+  keep_score: number;
+  confidence_band: ConfidenceBand;
+  // The single best size for the active Fit Profile (PDP "Recommended for …").
+  recommended_size?: string | null;
+  recommended_reason?: string | null;
+  // Electronics "what people actually returned this for" preempt.
+  return_reason?: string | null;
+  return_reason_share?: number | null;
+  drivers: ConfidenceDriver[];
+  interventions: ConfidenceIntervention[];
+};
+
+export type ReturnConfidenceDTO = {
+  user_id: string;
+  // Which Fit Profile this was scored for ("who are you shopping for?").
+  profile_id: string;
+  profile_name: string;
+  for_self: boolean;
+  keep_score: number;
+  confidence_band: ConfidenceBand;
+  headline: string;
+  drivers: ConfidenceDriver[];
+  interventions: ConfidenceIntervention[];
+  items: ProductConfidenceDTO[];
+};
+
+// ---- Track D · Fit Profiles ("who are you shopping for?") ----
+
+export type FitAxis = "tops" | "bottoms" | "shoes";
+export type Relationship = "self" | "partner" | "child" | "parent" | "friend" | "other";
+
+export type SizeAnchorDTO = { size: string; brand?: string | null };
+
+export type FitProfileEntryDTO = {
+  id: string;
+  name: string;
+  relationship: Relationship;
+  is_self: boolean;
+  // axis -> wardrobe anchor (a known brand + the size that person wears there).
+  anchors: Partial<Record<FitAxis, SizeAnchorDTO>>;
+  prefs: Record<string, string>;
+  // Electronics setup (self profile) — e.g. { phone: "ios", laptop: "usb-c" }.
+  setup?: Record<string, string>;
+};
+
+export type FitProfilesStateDTO = {
+  active_profile: string;
+  profiles: FitProfileEntryDTO[];
+};
+
+export type ProfileUpsertDTO = {
+  id?: string | null;
+  name: string;
+  relationship: Relationship;
+  anchors: Partial<Record<FitAxis, SizeAnchorDTO>>;
+  prefs?: Record<string, string>;
 };
 
 // ---- Layer-1 (Amazon) orders ----
@@ -420,8 +511,68 @@ export const getProduct = (id: string) => api<ProductDetailDTO>(`/products/${id}
 export const getCart = (fallback?: CartDTO) =>
   withFallback(api<CartDTO>("/cart"), fallback as CartDTO);
 
-export const postCart = (body: { product_id: string; size?: string; qty?: number }) =>
-  api<CartDTO>("/cart", { method: "POST", json: body });
+export const postCart = (body: {
+  product_id: string;
+  size?: string;
+  qty?: number;
+  profile_id?: string | null;
+}) => api<CartDTO>("/cart", { method: "POST", json: body });
+
+/** Reassign a cart line: change its size or who it's for ("anyone" → clear). */
+export const patchCartItem = (
+  itemId: string,
+  body: { size?: string; profile_id?: string | null },
+) => {
+  const json: { size?: string; profile_id?: string; clear_profile?: boolean } = {};
+  if (body.size !== undefined) json.size = body.size;
+  if (body.profile_id === null || body.profile_id === "anyone") json.clear_profile = true;
+  else if (body.profile_id !== undefined) json.profile_id = body.profile_id;
+  return api<CartDTO["items"][number]>(`/cart/${itemId}`, { method: "PATCH", json });
+};
+
+export const deleteCartItem = (itemId: string) => del(`/cart/${itemId}`);
+
+/** Return Confidence for the current server cart, scored for `profileId`. */
+export const getCartReturnConfidence = (profileId?: string, fallback?: ReturnConfidenceDTO) =>
+  withFallback(
+    api<ReturnConfidenceDTO>(
+      `/cart/return-confidence${profileId ? `?profile_id=${encodeURIComponent(profileId)}` : ""}`,
+    ),
+    fallback as ReturnConfidenceDTO,
+  );
+
+/** Return Confidence for a single product/size on the PDP, scored for `profileId`. */
+export const getProductReturnConfidence = (productId: string, size?: string, profileId?: string) => {
+  const params = new URLSearchParams();
+  if (size) params.set("size", size);
+  if (profileId) params.set("profile_id", profileId);
+  const qs = params.toString();
+  return api<ReturnConfidenceDTO>(`/products/${productId}/return-confidence${qs ? `?${qs}` : ""}`);
+};
+
+// ---- Fit Profiles ("who are you shopping for?") ----
+
+export const getFitProfiles = (fallback?: FitProfilesStateDTO) =>
+  withFallback(api<FitProfilesStateDTO>("/users/me/fit-profiles"), fallback as FitProfilesStateDTO);
+
+/** Create (no id) or update (id set) a Fit Profile + its wardrobe anchors. */
+export const upsertFitProfile = (body: ProfileUpsertDTO) =>
+  api<FitProfilesStateDTO>("/users/me/fit-profiles", { method: "POST", json: body });
+
+/** Delete a non-self profile (returns the updated state). */
+export const deleteFitProfile = (profileId: string) =>
+  api<FitProfilesStateDTO>(`/users/me/fit-profiles/${profileId}`, { method: "DELETE" });
+
+/** Set the active "shopping for" profile (persists server-side). */
+export const setActiveFitProfile = (profileId: string) =>
+  api<FitProfilesStateDTO>("/users/me/fit-profiles/active", {
+    method: "POST",
+    json: { profile_id: profileId },
+  });
+
+/** Save the buyer's device setup for electronics compatibility (self profile). */
+export const setDeviceSetup = (setup: Record<string, string>) =>
+  api<FitProfilesStateDTO>("/users/me/setup", { method: "PUT", json: { setup } });
 
 // ---- Layer-1 orders + checkout ----
 
