@@ -85,9 +85,9 @@ export function AmazonNav() {
           >
             <ShoppingBag className="size-5" />
             <span className="text-sm">Cart</span>
-            {cart.length > 0 && (
+            {cartCount > 0 && (
               <span className="absolute -top-1 -right-1 size-4 rounded-full bg-[#FF9900] text-[#131A22] text-[10px] font-bold flex items-center justify-center">
-                {cart.length}
+                {cartCount}
               </span>
             )}
           </Link>
