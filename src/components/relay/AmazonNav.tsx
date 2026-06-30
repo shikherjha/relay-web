@@ -11,10 +11,12 @@ import {
   Film,
   Sparkles,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { SmileLogo } from "./SmileLogo";
 import { useRelay } from "@/lib/store";
 import { PersonaToggle } from "./PersonaToggle";
 import { useSmileNavigate } from "./SmileTransition";
+import { getCart } from "@/lib/relay-api";
 
 const tiles = [
   { label: "Fresh", icon: Leaf, color: "#3DA45E" },
@@ -25,9 +27,16 @@ const tiles = [
 ];
 
 export function AmazonNav() {
-  const { theme, toggleTheme, cart, persona } = useRelay();
+  const { theme, toggleTheme, persona } = useRelay();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const trigger = useSmileNavigate();
+  // Use live server cart so the badge reflects the real count (not stale local store).
+  const { data: serverCart } = useQuery({
+    queryKey: ["cart"],
+    queryFn: () => getCart({ user_id: "", items: [], bracketing: [] }),
+    staleTime: 10_000,
+  });
+  const cartCount = serverCart?.items.length ?? 0;
   const goSeller = persona === "seller";
 
   return (
@@ -76,9 +85,9 @@ export function AmazonNav() {
           >
             <ShoppingBag className="size-5" />
             <span className="text-sm">Cart</span>
-            {cart.length > 0 && (
+            {cartCount > 0 && (
               <span className="absolute -top-1 -right-1 size-4 rounded-full bg-[#FF9900] text-[#131A22] text-[10px] font-bold flex items-center justify-center">
-                {cart.length}
+                {cartCount}
               </span>
             )}
           </Link>
