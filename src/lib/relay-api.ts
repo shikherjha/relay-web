@@ -81,9 +81,12 @@ export type ProductConfidenceDTO = {
   // The single best size for the active Fit Profile (PDP "Recommended for …").
   recommended_size?: string | null;
   recommended_reason?: string | null;
-  // Electronics "what people actually returned this for" preempt.
+  // Electronics preempt: the SKU's approximate return RATE (how often it's
+  // returned) + dominant reason as soft context. We show the rate, not the
+  // defect-share, so the copy reads as honest transparency, not alarm.
   return_reason?: string | null;
   return_reason_share?: number | null;
+  return_rate?: number | null;
   drivers: ConfidenceDriver[];
   interventions: ConfidenceIntervention[];
 };

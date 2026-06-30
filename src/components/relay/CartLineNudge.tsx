@@ -124,11 +124,11 @@ export function CartLineNudge({
   }
 
   if (insight && item.return_reason) {
-    const pct = Math.round((item.return_reason_share ?? 0) * 100);
+    const rate = Math.round((item.return_rate ?? 0) * 100);
     rows.push(
       <Row key="insight" tone="muted" icon={Info}>
-        Most returns here: &lsquo;{item.return_reason.replace(/_/g, " ")}&rsquo;
-        {pct ? ` · ${pct}%` : ""} — {insight.label}
+        {rate ? `About ${rate}% return this` : "Rarely returned"}
+        {`, usually ‘${item.return_reason.replace(/_/g, " ")}’`}
       </Row>,
     );
   }

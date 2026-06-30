@@ -32,7 +32,7 @@ export function FitForPurpose({
   const insightIv = confidence.interventions.find((iv) => iv.type === "return_insight");
   const offersSetup = confidence.interventions.some((iv) => iv.type === "setup_capture");
   const returnReason = item?.return_reason;
-  const returnShare = Math.round((item?.return_reason_share ?? 0) * 100);
+  const returnRate = Math.round((item?.return_rate ?? 0) * 100);
 
   const saveSetup = useMutation({
     mutationFn: (setup: Record<string, string>) => setDeviceSetup(setup),
@@ -85,20 +85,21 @@ export function FitForPurpose({
         </button>
       )}
 
-      {/* 2) "What people actually returned this for" — our return data, not FAQ. */}
+      {/* 2) Returns, upfront — the SKU's real RETURN RATE (how often it's sent
+          back), with the top reason as soft context. We show the rate, not a
+          defect-share, so it reads as honest transparency rather than alarm. */}
       {returnReason && (
         <div className="mt-3 rounded-md bg-secondary/60 p-2.5">
           <div className="flex items-center gap-1.5 text-[11px] font-medium">
-            <Info className="size-3.5 shrink-0" style={{ color: "var(--color-signal)" }} />
-            Why people return this
+            <Info className="size-3.5 shrink-0" style={{ color: "var(--color-relay)" }} />
+            Good to know
           </div>
           <div className="mt-1 text-[11px] text-muted-foreground">
-            Most returns here were{" "}
-            <span className="font-medium text-foreground">
-              &lsquo;{returnReason.replace(/_/g, " ")}&rsquo;
-            </span>
-            {returnShare ? ` · ${returnShare}%` : ""}
-            {insightIv ? ` — ${insightIv.label}` : "."}
+            {returnRate
+              ? `About ${returnRate}% of buyers return this`
+              : "Returns here are uncommon"}
+            {returnReason ? `, most often for ‘${returnReason.replace(/_/g, " ")}’.` : "."}
+            {insightIv ? ` ${insightIv.label}` : ""}
           </div>
         </div>
       )}
