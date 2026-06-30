@@ -17,6 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { pctFraction, productImage } from "@/lib/demo-constants";
 import { GradeBadge } from "@/components/relay/GradeBadge";
 import { DecayClock } from "@/components/relay/DecayClock";
+import { DispatchReasons } from "@/components/relay/DispatchReasons";
 import { useRelay } from "@/lib/store";
 import {
   getImpact,
@@ -114,17 +115,19 @@ function Rescue() {
   const tierName = wallet.tier ?? (earlyAccess ? "silver" : "standard");
   const embargoedCount = live.filter((l) => l.early_access).length;
 
-  // Most-recent return on top: `returned_at` is the true time the unit was
-  // returned, so a just-returned item (e.g. the MacBook) surfaces first across
-  // all scopes. Listings with no return context fall back to `expires_at`, then 0.
+  // Dispatch order (§21.4): the backend ranks each listing by its per-viewer
+  // dispatch_score (best local fit / wish match / urgency / carbon). We trust
+  // that order, falling back to most-recent-return when a score is absent.
   const sorted = [...live].sort((a, b) => {
-    const key = (r: RescueListingDTO) =>
+    const ds = (r: RescueListingDTO) => (r.dispatch_score ?? -1);
+    if (ds(b) !== ds(a)) return ds(b) - ds(a);
+    const ts = (r: RescueListingDTO) =>
       r.returned_at
         ? new Date(r.returned_at).getTime()
         : r.expires_at
           ? new Date(r.expires_at).getTime()
           : 0;
-    return key(b) - key(a);
+    return ts(b) - ts(a);
   });
 
   return (
@@ -302,6 +305,8 @@ function Rescue() {
                     </span>
                   )}
                 </div>
+                {/* Dispatch reasons — why this listing is surfaced for you (§21.4). */}
+                <DispatchReasons reasons={r.dispatch_reasons} className="mt-2" />
                 <div className="font-medium leading-tight mt-2">{r.title ?? "Rescue listing"}</div>
                 <div className="text-xs text-muted-foreground mt-1 inline-flex items-center gap-1">
                   <MapPin className="size-3" />{" "}

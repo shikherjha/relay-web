@@ -5,6 +5,7 @@ import { ArrowLeftRight, MapPin, Sparkles, ArrowLeft } from "lucide-react";
 import { categoryImage } from "@/lib/demo-constants";
 import { getPairMatches } from "@/lib/relay-api";
 import { GradeBadge } from "@/components/relay/GradeBadge";
+import { DispatchReasons } from "@/components/relay/DispatchReasons";
 import type { Grade } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/rescue/pairs")({
@@ -44,10 +45,14 @@ function PairsPage() {
           <motion.div key={`${pm.unit_a}-${pm.unit_b}`} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }} className="card-soft p-6">
             <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
-              <span className="text-xs px-2.5 py-1 rounded-full inline-flex items-center gap-1.5"
-                style={{ background: "color-mix(in oklab, var(--color-signal) 18%, transparent)", color: "var(--color-signal)" }}>
-                <Sparkles className="size-3" /> {Math.round(pm.score * 100)}% match
-              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs px-2.5 py-1 rounded-full inline-flex items-center gap-1.5"
+                  style={{ background: "color-mix(in oklab, var(--color-signal) 18%, transparent)", color: "var(--color-signal)" }}>
+                  <Sparkles className="size-3" /> {Math.round(pm.score * 100)}% match
+                </span>
+                {/* Same dispatch framing as the feed — a swap is the strongest edge. */}
+                <DispatchReasons reasons={pm.dispatch_reasons} />
+              </div>
               <span className="text-muted-foreground text-xs inline-flex items-center gap-1">
                 <MapPin className="size-3" /> {pm.distance_km?.toFixed(1) ?? "—"} km
               </span>

@@ -236,7 +236,13 @@ export type RescueListingDTO = {
   // AI-suggested resale pricing (additive).
   list_price?: number | null;
   price_range?: PriceRange | null;
+  // Rescue Dispatch Score (§21.4): per-viewer edge utility + "why you're seeing
+  // this" reasons. The feed is ordered by dispatch_score.
+  dispatch_score?: number | null;
+  dispatch_reasons?: DispatchReasonDTO[];
 };
+
+export type DispatchReasonDTO = { code: string; label: string };
 
 export type RescueScope = "local" | "national" | "all";
 
@@ -384,6 +390,9 @@ export type PairMatchDTO = {
   score: number;
   distance_km: number | null;
   status: string;
+  // Pair swaps share the rescue dispatch framing (zero-payment, lowest carbon).
+  dispatch_score?: number | null;
+  dispatch_reasons?: DispatchReasonDTO[];
 };
 
 export type ApiPassport = {
