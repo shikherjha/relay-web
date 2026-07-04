@@ -409,6 +409,7 @@ export type ApiPassport = {
   packaging_state?: string | null;
   defects: { type: string; severity: string; description?: string | null }[];
   passport_hash?: string | null;
+  model_tier_used?: string | null;
   notes?: string | null;
   // Optional AI order-vs-item verification (additive).
   verification?: PassportVerification | null;
@@ -468,6 +469,7 @@ export type LedgerVerifyDTO = {
   image_url?: string | null;
   grade?: string | null;
   media_urls?: string[];
+  passport?: ApiPassport | null;
 };
 
 // ---- Buyer dashboard tracking (returns + p2p resells) ----
@@ -789,9 +791,28 @@ export function apiPassportToUi(
       severity: sevMap[d.severity] ?? 1,
     })),
     hash: p.passport_hash ?? "",
-    graderNote: p.notes ?? "Graded by Relay AI · demo-safe mock pipeline.",
+    graderNote: p.notes ?? graderNoteForTier(p.model_tier_used),
     verification: p.verification ?? undefined,
   };
+}
+
+function graderNoteForTier(tier?: string | null): string {
+  if (!tier) {
+    return "Graded by Relay AI.";
+  }
+  if (tier.startsWith("mock")) {
+    return "Graded by Relay local fallback.";
+  }
+  if (tier.startsWith("bedrock")) {
+    return "Graded by Relay AI using Bedrock.";
+  }
+  if (tier.startsWith("cnn")) {
+    return "Graded by Relay AI using the local vision model.";
+  }
+  if (tier === "rejected") {
+    return "Media quality check requested a re-upload.";
+  }
+  return `Graded by Relay AI using ${tier}.`;
 }
 
 export { DEMO_GEO };

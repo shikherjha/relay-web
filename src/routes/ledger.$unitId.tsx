@@ -29,6 +29,7 @@ import { productImage, pctFraction } from "@/lib/demo-constants";
 import {
   getRescueFeed,
   getSecondLife,
+  apiPassportToUi,
   type LedgerVerifyDTO,
   type RescueListingDTO,
   type ResaleListing,
@@ -78,7 +79,14 @@ function LedgerPage() {
     placeholderData: fallback,
   });
   const verify = data ?? fallback;
-  const passport = verify.passport ?? passports.find((p) => p.unitId === unitId);
+  const livePassport = verify.passport
+    ? apiPassportToUi(
+        verify.passport,
+        verify.title ?? "Condition Passport",
+        (verify.media_urls ?? [])[0] ?? verify.image_url,
+      )
+    : undefined;
+  const passport = livePassport ?? passports.find((p) => p.unitId === unitId);
   const passportHash = verify.passport_hash ?? "";
 
   // Is this unit currently buyable? Cross-reference the live Second-Life + Rescue
@@ -148,6 +156,15 @@ function LedgerPage() {
             About this item
           </div>
           <p className="text-sm text-foreground/80 mt-1.5 max-w-xl">{metaDescription}</p>
+          {passport && (
+            <div className="mt-4 rounded-xl border border-border bg-card/70 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+              <GradeBadge grade={passport.grade} confidence={passport.confidence} />
+              <div className="min-w-0">
+                <div className="text-xs font-medium">Current grade: {passport.grade}</div>
+                <p className="text-xs text-muted-foreground mt-0.5">{passport.graderNote}</p>
+              </div>
+            </div>
+          )}
           {rescueClock && (
             <div className="mt-3 max-w-sm">
               <DecayClock
