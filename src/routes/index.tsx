@@ -285,12 +285,12 @@ function Index() {
 
   return (
     <div className="bg-background">
-      <div className="mx-auto max-w-[1320px] px-4 py-4 sm:px-6 sm:py-5">
+      <div className="mx-auto max-w-[1320px] overflow-hidden px-3 py-3 sm:px-6 sm:py-5">
         <section className="space-y-4">
-          <div className="grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)_150px]">
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_150px] lg:grid-cols-[240px_minmax(0,1fr)_150px]">
             <Link
               to="/rescue"
-              className="flex min-h-14 items-center gap-3 rounded-lg border border-border bg-card px-4 shadow-sm transition hover:border-primary/40 hover:bg-secondary/60"
+              className="flex min-h-14 items-center gap-3 rounded-lg border border-border bg-card px-4 shadow-sm transition hover:border-primary/40 hover:bg-secondary/60 sm:col-span-2 lg:col-span-1"
             >
               <span className="flex size-9 items-center justify-center rounded-lg bg-secondary">
                 <MapPin className="size-4 text-primary" />
@@ -306,12 +306,12 @@ function Index() {
               <input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search hoodie, headphones, MacBook, sneakers..."
-                className="h-14 w-full rounded-lg border border-border bg-card px-12 text-sm outline-none shadow-sm transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
+                placeholder="Search hoodie, headphones..."
+                className="h-14 w-full rounded-lg border border-border bg-card px-12 pr-28 text-sm outline-none shadow-sm transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10 sm:placeholder:text-transparent md:placeholder:text-muted-foreground"
               />
               <button
                 type="submit"
-                className="absolute right-2 top-2 inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-[var(--color-relay-hover)]"
+                className="absolute right-2 top-2 inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition hover:bg-[var(--color-relay-hover)] sm:px-4"
               >
                 <Wand2 className="size-4" />
                 Genie
@@ -330,15 +330,15 @@ function Index() {
             </Link>
           </div>
 
-          <div className="overflow-x-auto pb-1">
-            <div className="grid min-w-[780px] grid-cols-6 gap-3">
+          <div className="pb-1">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
               {categoryShortcuts.map((item) => (
                 <Link
                   key={item.label}
                   to={item.to}
-                  className="group flex items-center gap-3 rounded-lg border border-border bg-card p-3 shadow-sm transition hover:border-primary/40 hover:bg-secondary/60"
+                  className="group flex min-w-0 items-center gap-3 rounded-lg border border-border bg-card p-3 shadow-sm transition hover:border-primary/40 hover:bg-secondary/60"
                 >
-                  <span className="size-14 shrink-0 overflow-hidden rounded-lg bg-secondary">
+                  <span className="size-12 shrink-0 overflow-hidden rounded-lg bg-secondary sm:size-14">
                     <img
                       src={item.image}
                       alt=""
@@ -347,7 +347,7 @@ function Index() {
                     />
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold">{item.label}</span>
+                    <span className="block text-sm font-semibold leading-tight">{item.label}</span>
                     <span className="block truncate text-xs text-muted-foreground">{item.detail}</span>
                   </span>
                 </Link>
@@ -365,7 +365,7 @@ function Index() {
             onMouseLeave={() => setCarouselPaused(false)}
             onFocus={() => setCarouselPaused(true)}
             onBlur={() => setCarouselPaused(false)}
-            className="relative min-h-[340px] overflow-hidden rounded-lg border border-border bg-ink text-white shadow-sm"
+            className="relative min-h-[430px] overflow-hidden rounded-lg border border-border bg-ink text-white shadow-sm sm:min-h-[340px]"
           >
             <motion.img
               key={heroSlide.id}
@@ -374,9 +374,9 @@ function Index() {
               initial={{ opacity: 0, scale: 1.03 }}
               animate={{ opacity: 0.7, scale: 1 }}
               transition={{ duration: 0.45 }}
-              className="absolute inset-y-0 right-0 h-full w-full object-cover opacity-70 md:w-[62%]"
+              className="absolute inset-y-0 right-0 h-full w-full object-cover opacity-60 sm:opacity-70 md:w-[62%]"
             />
-            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(20,32,27,0.96)_0%,rgba(20,32,27,0.82)_42%,rgba(20,32,27,0.2)_100%)]" />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,32,27,0.98)_0%,rgba(20,32,27,0.82)_48%,rgba(20,32,27,0.6)_100%)] sm:bg-[linear-gradient(90deg,rgba(20,32,27,0.96)_0%,rgba(20,32,27,0.82)_42%,rgba(20,32,27,0.2)_100%)]" />
             {heroSlides.length > 1 && (
               <>
                 <button
@@ -397,7 +397,7 @@ function Index() {
                 </button>
               </>
             )}
-            <div className="relative flex min-h-[340px] max-w-xl flex-col justify-between p-5 sm:p-7">
+            <div className="relative flex min-h-[430px] max-w-xl flex-col justify-between p-4 sm:min-h-[340px] sm:p-7">
               <div>
                 <div className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium">
                   <Zap className="size-3.5 text-[var(--color-signal)]" />
@@ -408,11 +408,11 @@ function Index() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.32 }}
-                  className="mt-5 max-w-[13ch] font-display text-4xl font-semibold leading-none sm:text-5xl"
+                  className="mt-4 max-w-[14ch] font-display text-3xl font-semibold leading-[0.98] sm:mt-5 sm:text-5xl"
                 >
                   {heroSlide.headline}
                 </motion.h1>
-                <p className="mt-4 max-w-md text-sm leading-6 text-white/78 sm:text-base">
+                <p className="mt-3 max-w-md text-sm leading-5 text-white/78 sm:mt-4 sm:text-base sm:leading-6">
                   {heroSlide.copy}
                 </p>
               </div>
@@ -424,8 +424,8 @@ function Index() {
                     <span className="text-xs text-white/72">{heroSlide.category}</span>
                   </div>
                   <div className="mt-2 truncate text-sm font-semibold">{heroSlide.itemTitle}</div>
-                  <div className="mt-1 flex items-baseline gap-2">
-                    <span className="font-display text-2xl">{inr(heroSlide.price)}</span>
+                  <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                    <span className="font-display text-xl sm:text-2xl">{inr(heroSlide.price)}</span>
                     <span className="text-xs text-white/55 line-through">
                       {inr(heroSlide.originalPrice)}
                     </span>
@@ -446,7 +446,7 @@ function Index() {
               </div>
             </div>
             {heroSlides.length > 1 && (
-              <div className="absolute bottom-4 right-5 z-10 flex items-center gap-2">
+              <div className="absolute bottom-4 right-4 z-10 flex items-center gap-2 sm:right-5">
                 {heroSlides.map((slide, index) => (
                   <button
                     key={slide.id}

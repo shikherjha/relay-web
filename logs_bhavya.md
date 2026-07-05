@@ -175,3 +175,27 @@ This file records frontend changes made in `relay-web` for Bhavya so the UI work
 - Rebuilt/restarted the local app with `docker compose --profile apps up -d --build relay-web`.
 - Verified `http://127.0.0.1:3000/genie` returns HTTP 200.
 - Verified the API health check is ok with DB connected.
+
+
+## 2026-07-04 - Mobile homepage layout fix
+
+### Frontend update
+
+- Updated `src/routes/index.tsx` so the Discover homepage no longer forces a desktop-width layout on small screens.
+- Removed the `min-w-[780px]` shortcut rail that caused horizontal overflow on 375px mobile viewports.
+- Changed category shortcuts into a responsive grid:
+  - 2 columns on mobile.
+  - 3 columns on small tablets.
+  - 6 columns on desktop.
+- Tightened the mobile search/location/cart area so controls stack cleanly without pushing the page wider than the viewport.
+- Adjusted the hero carousel for mobile:
+  - smaller mobile headline sizing.
+  - stronger vertical overlay for readability.
+  - wrapped price row so it does not overflow.
+  - mobile-specific height and padding.
+- Updated `src/styles.css` with a global `overflow-x: hidden` guard for accidental horizontal page scroll.
+
+### Verification
+
+- `npm.cmd run build` passed.
+- `git diff --check` passed with only normal LF-to-CRLF warnings.

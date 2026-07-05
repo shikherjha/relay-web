@@ -164,6 +164,12 @@
 }
 
 @layer base {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
   * {
     border-color: var(--color-border);
   }
