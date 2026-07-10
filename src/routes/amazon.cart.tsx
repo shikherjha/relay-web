@@ -21,7 +21,7 @@ export const Route = createFileRoute("/amazon/cart")({
   head: () => ({
     meta: [
       { title: "Cart — Amazon" },
-      { name: "description", content: "Your Amazon bag with the bracketing interceptor." },
+      { name: "description", content: "Your Amazon shopping cart." },
     ],
   }),
   component: AmazonCartPage,
@@ -71,15 +71,6 @@ function AmazonCartPage() {
   });
 
   const items = cart?.items ?? [];
-
-  // Drop the spare sizes of a same-recipient duplicate, keeping `keepSize`.
-  const keepSizeMut = useMutation({
-    mutationFn: async ({ keepSize, lineIds }: { keepSize: string; lineIds: string[] }) => {
-      const drop = items.filter((c) => lineIds.includes(c.id) && c.size !== keepSize);
-      await Promise.all(drop.map((c) => deleteCartItem(c.id)));
-    },
-    onSuccess: invalidateCart,
-  });
 
   // Swap a line's size (the recipient's recommended size).
   const swapSizeMut = useMutation({
@@ -153,8 +144,7 @@ function AmazonCartPage() {
                 {showNudge && (
                   <CartLineNudge
                     item={conf}
-                    busy={keepSizeMut.isPending || swapSizeMut.isPending}
-                    onKeepSize={(keepSize, lineIds) => keepSizeMut.mutate({ keepSize, lineIds })}
+                    busy={swapSizeMut.isPending}
                     onSwapSize={(size) => swapSizeMut.mutate({ itemId: c.id, size })}
                   />
                 )}

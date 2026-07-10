@@ -64,21 +64,18 @@ function Action({
 
 export function CartLineNudge({
   item,
-  onKeepSize,
   onSwapSize,
   busy = false,
 }: {
   item: ProductConfidenceDTO;
-  onKeepSize?: (keepSize: string, lineIds: string[]) => void;
   onSwapSize?: (size: string) => void;
   busy?: boolean;
 }) {
   const who = item.for_self ? "you" : item.profile_name;
 
-  const drop = item.interventions.find((iv) => iv.action === "remove_extra_sizes");
-  const dupDriver = item.drivers.find((d) => ["bracketing", "duplicate_variant"].includes(d.type));
   const mismatch = item.interventions.find(
-    (iv) => iv.type === "size_recommendation" && iv.suggested_size && iv.action !== "remove_extra_sizes",
+    (iv) =>
+      iv.type === "size_recommendation" && iv.suggested_size && iv.action !== "remove_extra_sizes",
   );
   const verdict = item.drivers.find((d) => d.type === "compatibility_match");
   const insight = item.interventions.find((iv) => iv.type === "return_insight");
@@ -89,20 +86,7 @@ export function CartLineNudge({
 
   const rows: ReactNode[] = [];
 
-  if (drop && dupDriver) {
-    rows.push(
-      <Row key="dup" tone="warn" icon={Info}>
-        <span className="inline-flex items-center gap-1 flex-wrap">
-          {dupDriver.label}
-          {drop.suggested_size && (
-            <Action busy={busy} onClick={() => onKeepSize?.(drop.suggested_size!, item.line_ids)}>
-              Keep size {drop.suggested_size}
-            </Action>
-          )}
-        </span>
-      </Row>,
-    );
-  } else if (mismatch?.suggested_size) {
+  if (mismatch?.suggested_size) {
     rows.push(
       <Row key="mis" tone="warn" icon={Info}>
         <span className="inline-flex items-center gap-1 flex-wrap">
@@ -133,7 +117,7 @@ export function CartLineNudge({
     );
   }
 
-  if (!drop && !mismatch && !insight && risk) {
+  if (!mismatch && !insight && risk) {
     rows.push(
       <Row key="risk" tone="muted" icon={Info}>
         {risk.label}

@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { AlertTriangle, Info, RotateCcw, ShieldCheck, Star, Truck } from "lucide-react";
+import { Info, RefreshCw, RotateCcw, ShieldCheck, Star, Truck } from "lucide-react";
 import { productImage } from "@/lib/demo-constants";
 import { getProduct, getProductReturnConfidence, postCart } from "@/lib/relay-api";
 import type { FitAxis } from "@/lib/relay-api";
@@ -16,8 +16,14 @@ export const Route = createFileRoute("/amazon/products/$id")({
 
 // Which fit axis a category belongs to (mirrors the backend _FIT_AXIS map).
 const FIT_AXIS: Record<string, FitAxis> = {
-  jeans: "bottoms", pants: "bottoms", trousers: "bottoms", shorts: "bottoms", skirt: "bottoms",
-  sneakers: "shoes", shoes: "shoes", footwear: "shoes",
+  jeans: "bottoms",
+  pants: "bottoms",
+  trousers: "bottoms",
+  shorts: "bottoms",
+  skirt: "bottoms",
+  sneakers: "shoes",
+  shoes: "shoes",
+  footwear: "shoes",
 };
 const SIZE_OPTS: Record<FitAxis, string[]> = {
   tops: ["XS", "S", "M", "L", "XL", "XXL"],
@@ -30,12 +36,21 @@ const axisFor = (cat?: string | null): FitAxis => FIT_AXIS[(cat || "").toLowerCa
 function AmazonPDP() {
   const { id } = useParams({ from: "/amazon/products/$id" });
   const qc = useQueryClient();
-  const { data: p, isLoading } = useQuery({
+  const {
+    data: p,
+    isPending,
+    isError,
+    refetch,
+    isFetching,
+  } = useQuery({
     queryKey: ["product", id],
     queryFn: () => getProduct(id),
+    retry: 2,
+    retryDelay: 350,
   });
-  const { addToCart, cart, fitProfileId } = useRelay();
+  const { addToCart, fitProfileId } = useRelay();
   const [size, setSize] = useState("M");
+  const [added, setAdded] = useState(false);
 
   // Keep the selected size valid for the product's axis (e.g. jeans → "32").
   useEffect(() => {
@@ -60,8 +75,25 @@ function AmazonPDP() {
     queryFn: () => getProductReturnConfidence(id, size, fitProfileId),
   });
 
-  if (isLoading)
-    return <div className="p-12 max-w-[1200px] mx-auto text-muted-foreground">Loading…</div>;
+  if (isPending)
+    return <div className="p-12 max-w-[1200px] mx-auto text-[#565959]">Loading product...</div>;
+  if (isError)
+    return (
+      <div className="mx-auto max-w-[700px] px-6 py-20 text-center text-[#0f1111]">
+        <h1 className="text-2xl font-semibold">We couldn't load this product</h1>
+        <p className="mt-2 text-sm text-[#565959]">
+          The product is still available. Please try the request again.
+        </p>
+        <button
+          type="button"
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#ffd814] px-5 py-2.5 text-sm font-medium hover:bg-[#f7ca00] disabled:opacity-60"
+        >
+          <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} /> Try again
+        </button>
+      </div>
+    );
   if (!p) return <div className="p-12 max-w-[1200px] mx-auto">Product not found.</div>;
 
   const brand = (p.metadata as { brand?: string } | null | undefined)?.brand ?? p.vertical;
@@ -71,9 +103,6 @@ function AmazonPDP() {
   const originalPrice = (p.metadata as { original_price?: number } | null | undefined)
     ?.original_price;
 
-  const inCart = cart.filter((c) => c.productId === p.id);
-  const distinct = new Set(inCart.map((c) => c.size)).size;
-
   const item = confidence?.items?.[0];
   const recSize = item?.recommended_size ?? null;
   // A single, supportive "why" note (fit/SKU signal) shown Amazon-style under sizes.
@@ -82,7 +111,6 @@ function AmazonPDP() {
   );
   const fitMatch = confidence?.drivers?.find((d) => d.positive && d.type === "fit_confidence");
 
-  const [added, setAdded] = useState(false);
   const onAdd = () => {
     addToCart({ productId: p.id, size });
     addMut.mutate(size);
@@ -211,28 +239,6 @@ function AmazonPDP() {
             <Truck className="size-3" /> FREE delivery tomorrow
           </div>
           <div className="text-xs text-muted-foreground">In stock · Sold by {brand} Retail</div>
-
-          {distinct >= 3 && (
-            <div
-              className="rounded-lg border p-3 flex items-start gap-2 text-xs leading-relaxed"
-              style={{
-                borderColor: "color-mix(in oklab, var(--color-signal) 35%, transparent)",
-                background: "color-mix(in oklab, var(--color-signal) 8%, transparent)",
-              }}
-            >
-              <AlertTriangle
-                className="size-3.5 mt-0.5 shrink-0"
-                style={{ color: "var(--color-signal)" }}
-              />
-              <span>
-                You've added {distinct} sizes of this item. Most multi-size orders end in a return —
-                keep the one that fits.{" "}
-                <Link to="/amazon/cart" className="text-primary hover:underline">
-                  Review cart →
-                </Link>
-              </span>
-            </div>
-          )}
 
           <button
             onClick={onAdd}

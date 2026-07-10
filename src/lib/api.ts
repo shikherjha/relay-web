@@ -82,8 +82,9 @@ export async function uploadReturnMediaFiles(
   returnId: string,
   files: Blob[],
   namePrefix = "angle",
+  filenames?: string[],
 ): Promise<MediaResult> {
-  return uploadFiles<MediaResult>(`/returns/${returnId}/media`, files, namePrefix);
+  return uploadFiles<MediaResult>(`/returns/${returnId}/media`, files, namePrefix, filenames);
 }
 
 /**
@@ -95,11 +96,12 @@ export async function uploadFiles<T>(
   path: string,
   files: Blob[],
   namePrefix = "file",
+  filenames?: string[],
 ): Promise<T> {
   const form = new FormData();
   files.forEach((f, i) => {
     const ext = f.type?.startsWith("video/") ? "mp4" : "jpg";
-    form.append("files", f, `${namePrefix}-${i + 1}.${ext}`);
+    form.append("files", f, filenames?.[i] ?? `${namePrefix}-${i + 1}.${ext}`);
   });
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 60000);

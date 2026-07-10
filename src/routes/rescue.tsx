@@ -11,6 +11,8 @@ import {
   ShieldCheck,
   Sparkles,
   ShoppingBag,
+  ArrowUpDown,
+  Clock3,
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -61,6 +63,22 @@ const SCOPES: { id: RescueScope; label: string }[] = [
   { id: "national", label: "National" },
 ];
 
+type RescueSort = "newest" | "oldest" | "ending";
+
+function returnTime(listing: RescueListingDTO): number {
+  return listing.returned_at ? new Date(listing.returned_at).getTime() : 0;
+}
+
+function returnedLabel(value?: string | null): string {
+  if (!value) return "Return time unavailable";
+  const minutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60_000));
+  if (minutes < 1) return "Returned just now";
+  if (minutes < 60) return `Returned ${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `Returned ${hours}h ago`;
+  return `Returned ${Math.floor(hours / 24)}d ago`;
+}
+
 /** Path A = keep-it-local pickup; Path B = shipped Certified Second-Life. */
 function PathBadge({ r }: { r: RescueListingDTO }) {
   const national = r.scope === "national";
@@ -98,6 +116,7 @@ function Rescue() {
   const addToRelayCart = useRelay((s) => s.addToRelayCart);
   const removeFromRelayCart = useRelay((s) => s.removeFromRelayCart);
   const [scope, setScope] = useState<RescueScope>("all");
+  const [sortMode, setSortMode] = useState<RescueSort>("newest");
   const navigate = useNavigate();
 
   // Pillar 5: green credits buy early access. The tier + embargoed-listing
@@ -119,15 +138,13 @@ function Rescue() {
   // dispatch_score (best local fit / wish match / urgency / carbon). We trust
   // that order, falling back to most-recent-return when a score is absent.
   const sorted = [...live].sort((a, b) => {
-    const ds = (r: RescueListingDTO) => (r.dispatch_score ?? -1);
-    if (ds(b) !== ds(a)) return ds(b) - ds(a);
-    const ts = (r: RescueListingDTO) =>
-      r.returned_at
-        ? new Date(r.returned_at).getTime()
-        : r.expires_at
-          ? new Date(r.expires_at).getTime()
-          : 0;
-    return ts(b) - ts(a);
+    if (sortMode === "oldest") return returnTime(a) - returnTime(b);
+    if (sortMode === "ending") {
+      const aExpiry = a.expires_at ? new Date(a.expires_at).getTime() : Number.MAX_SAFE_INTEGER;
+      const bExpiry = b.expires_at ? new Date(b.expires_at).getTime() : Number.MAX_SAFE_INTEGER;
+      return aExpiry - bExpiry;
+    }
+    return returnTime(b) - returnTime(a);
   });
 
   return (
@@ -173,6 +190,22 @@ function Rescue() {
             {s.label}
           </button>
         ))}
+      </div>
+
+      <div className="mt-3 flex justify-end">
+        <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+          <ArrowUpDown className="size-4" />
+          <span className="sr-only">Sort rescue listings</span>
+          <select
+            value={sortMode}
+            onChange={(event) => setSortMode(event.target.value as RescueSort)}
+            className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <option value="newest">Latest returns first</option>
+            <option value="oldest">Oldest returns first</option>
+            <option value="ending">Ending soon</option>
+          </select>
+        </label>
       </div>
 
       {/* Pillar 5 flywheel: credits buy early access to this feed. */}
@@ -244,7 +277,8 @@ function Rescue() {
           // TTL + expiry. National / shipped relists have no decay (was wrongly
           // showing a bogus 60-min fallback clock).
           const showClock = !ships && ttl > 0 && Boolean(r.expires_at);
-          const openProduct = () => navigate({ to: "/ledger/$unitId", params: { unitId: r.unit_id } });
+          const openProduct = () =>
+            navigate({ to: "/ledger/$unitId", params: { unitId: r.unit_id } });
           const stop = (e: { stopPropagation: () => void }) => e.stopPropagation();
           const addToCart = () =>
             addToRelayCart({
@@ -312,6 +346,9 @@ function Rescue() {
                   <MapPin className="size-3" />{" "}
                   {r.distance_km != null ? `${r.distance_km} km` : "ships"} · {r.reason ?? "return"}
                 </div>
+                <div className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <Clock3 className="size-3" /> {returnedLabel(r.returned_at)}
+                </div>
                 {showClock ? (
                   <div className="mt-3">
                     <DecayClock
@@ -336,8 +373,8 @@ function Rescue() {
                 </div>
                 {r.price_range && (
                   <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <Sparkles className="size-3" style={{ color: "var(--color-signal)" }} /> AI-priced
-                    · range ₹{r.price_range.min.toLocaleString("en-IN")}–₹
+                    <Sparkles className="size-3" style={{ color: "var(--color-signal)" }} />{" "}
+                    AI-priced · range ₹{r.price_range.min.toLocaleString("en-IN")}–₹
                     {r.price_range.max.toLocaleString("en-IN")}
                   </div>
                 )}

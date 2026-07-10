@@ -172,6 +172,130 @@ This file records frontend changes made in `relay-web` for Bhavya so the UI work
 
 - `npm.cmd run build` passed.
 - `git diff --check` passed with only normal LF-to-CRLF warnings.
+
+
+## 2026-07-10 - Amazon storefront, guided returns, Passport redesign, live Genie, and Rescue sorting
+
+### Amazon storefront redesign
+
+- Rebuilt `src/components/relay/AmazonNav.tsx` to follow the familiar Amazon.in information hierarchy:
+  - dark Amazon header;
+  - India wordmark treatment;
+  - delivery location;
+  - department selector and wide search field;
+  - account, orders, and cart controls;
+  - secondary department navigation;
+  - Relay Second-Life entry point.
+- Rebuilt `src/routes/amazon.index.tsx` as an Amazon-style shopping surface:
+  - product-led footwear hero;
+  - overlapping white category panels;
+  - horizontal recommendation rail;
+  - restrained Relay Condition Passport promotion.
+- Prioritized the new `FAS-SN-699` shoe in the hero and product recommendations.
+- Selected known catalogue SKUs for the four category panels so headings align with shoes, fashion, headphones, and wearables.
+- Fixed mobile header behavior:
+  - logo and cart remain on the first row;
+  - search moves to a full-width second row;
+  - secondary navigation remains horizontally scrollable.
+- Reduced the hero/category overlap so the `Shop now` CTA is not covered.
+
+### Product first-open error
+
+- Updated `src/routes/amazon.products.$id.tsx` to distinguish pending, error, and genuine not-found states.
+- Added two short retries for transient product requests.
+- Added a clear in-page `Try again` action instead of incorrectly showing `Product not found` after a temporary API/ML failure.
+- Fixed the existing conditional React hook placement while validating the route.
+- Live verification returned HTTP 200 for the shoe product detail on three consecutive requests.
+
+### Six photos or one video return flow
+
+- Rebuilt the evidence step in `src/routes/returns.new.tsx` with a segmented mode control:
+  - `6 photos`;
+  - `1 video`.
+- Photo mode now has six stable slots labeled:
+  - front;
+  - back;
+  - left;
+  - right;
+  - top;
+  - bottom.
+- Each angle supports preview and replacement.
+- The UI displays completion progress and disables grading until all six slots are filled.
+- Video mode accepts one walkthrough, provides playback preview, and supports replacement.
+- The optional video path was explicitly preserved after Bhavya clarified that customers should choose either evidence format.
+- Updated `src/lib/api.ts` so multipart uploads can carry explicit angle filenames required by the backend contract.
+- Disposition completion now invalidates both the Rescue feed and Genie match cache.
+
+### Condition Passport redesign
+
+- Rebuilt `src/components/relay/ConditionPassport.tsx` to look like an actual open passport instead of a generic ticket/card.
+- Added:
+  - dark green passport cover/header treatment;
+  - passport number;
+  - product photograph and defect markers;
+  - product identity, category, packaging, and unit ID;
+  - large stamped AI grade;
+  - confidence score;
+  - condition description/grader note;
+  - inspection findings;
+  - order verification badge;
+  - machine-readable identity lines;
+  - full passport hash with copy control;
+  - LifeLedger verification status and immutable-history link.
+- Visually verified the component in the live LifeLedger page using a tall Chrome screenshot.
+
+### Prevention cleanup
+
+- Removed the product-page warning that told customers they had added three different sizes.
+- Removed the cart-level `remove_extra_sizes` intervention and `Keep size` action.
+- Preserved useful customer-first fit recommendations and electronics compatibility guidance.
+
+### Live Genie notifications
+
+- Added `src/components/relay/GenieMatchNotifier.tsx` and mounted it globally from `src/routes/__root.tsx`.
+- Genie now polls `/wishlist/matches` every three seconds, including while the customer is on another route.
+- New match IDs are persisted in local storage so the customer is not repeatedly notified about the same unit.
+- New matches raise a Sonner toast containing product title, live price, and a `View match` action.
+- Added an on-page `Live matching is active` status to `src/routes/genie.tsx`.
+- The Genie route itself also refreshes match data every three seconds.
+- Live UI verification showed the toast: `Genie found your match - Cotton Crew Tee is available for INR 763.61`.
+
+### Genie T-shirt visibility fix
+
+- Diagnosed why two wishes remained in `Watching` while Cotton Crew Tee appeared in Rescue.
+- The frontend wording was valid; both `Cotton Crew Tee` and `Cotton Tshirt` correctly canonicalized to `tshirt`.
+- The backend fix made the existing wishes update automatically without recreating them.
+- Final Genie UI verification showed:
+  - `Cotton Crew Tee - <= INR 800`: Granted, two matches;
+  - `Cotton Tshirt - <= INR 800`: Granted, two matches;
+  - top live price approximately `INR 763.61`;
+  - match chooser available for both wishes.
+
+### Rescue return-time sorting
+
+- Updated `src/routes/rescue.tsx` with explicit sort modes:
+  - latest returns first (default);
+  - oldest returns first;
+  - ending soon.
+- Added visible `Returned just now`, minute, hour, and day age labels to listing cards.
+- This lets customers choose between newly available inventory and Rescue windows close to expiry.
+
+### INR 699 shoe product
+
+- Surfaced `Everyday Comfort Running Shoes` at `INR 699` throughout the Amazon storefront.
+- The product uses the API-served local PNG so it remains visible without external image access.
+- Verified the image response is HTTP 200 with `Content-Type: image/png`.
+
+### Frontend verification
+
+- `npm.cmd run build` passed locally and inside the Docker web image.
+- `npx.cmd tsc --noEmit` passed.
+- ESLint passed for every changed frontend file.
+- The repository-wide lint command still reports the repository's existing CRLF/Prettier mismatch; changed files were formatted and linted directly.
+- Desktop and mobile Amazon storefront screenshots were captured with headless Chrome.
+- A tall LifeLedger screenshot confirmed the passport layout, grade, condition description, hash, and verification footer render correctly.
+- A Genie screenshot confirmed both T-shirt wishes are granted and the global toast is visible.
+- The running web app returns HTTP 200 at `http://127.0.0.1:3000/amazon`.
 - Rebuilt/restarted the local app with `docker compose --profile apps up -d --build relay-web`.
 - Verified `http://127.0.0.1:3000/genie` returns HTTP 200.
 - Verified the API health check is ok with DB connected.
@@ -199,3 +323,9 @@ This file records frontend changes made in `relay-web` for Bhavya so the UI work
 
 - `npm.cmd run build` passed.
 - `git diff --check` passed with only normal LF-to-CRLF warnings.
+
+
+## 2026-07-10 - Current session index
+
+- The full frontend record for this session is in the section titled `2026-07-10 - Amazon storefront, guided returns, Passport redesign, live Genie, and Rescue sorting` above.
+- It covers the Amazon redesign, product retry behavior, six-photo/video return flow, passport UI, Genie notifications, T-shirt matching, Rescue sorting, and visual verification.

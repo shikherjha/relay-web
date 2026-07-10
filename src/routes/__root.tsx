@@ -14,6 +14,8 @@ import appCss from "../styles.css?url";
 import { Nav } from "@/components/relay/Nav";
 import { AmazonNav } from "@/components/relay/AmazonNav";
 import { SmileTransitionOverlay } from "@/components/relay/SmileTransition";
+import { GenieMatchNotifier } from "@/components/relay/GenieMatchNotifier";
+import { Toaster } from "@/components/ui/sonner";
 import { useRelay } from "@/lib/store";
 
 function NotFoundComponent() {
@@ -139,6 +141,8 @@ function RootComponent() {
           <Outlet />
         </main>
         <SmileTransitionOverlay />
+        <GenieMatchNotifier />
+        <Toaster position="top-right" richColors />
       </div>
     </QueryClientProvider>
   );

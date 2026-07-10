@@ -1,7 +1,6 @@
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { ChevronRight, Star, ShieldCheck } from "lucide-react";
+import { ChevronRight, ShieldCheck, Star } from "lucide-react";
 import { productImage } from "@/lib/demo-constants";
 import { getProducts } from "@/lib/relay-api";
 import { useSmileNavigate } from "@/components/relay/SmileTransition";
@@ -11,144 +10,165 @@ import { useRelay } from "@/lib/store";
 export const Route = createFileRoute("/amazon/")({
   head: () => ({
     meta: [
-      { title: "Amazon.in — Shop new" },
-      { name: "description", content: "Amazon storefront with Relay second-life inside." },
+      { title: "Amazon.in: Online Shopping India" },
+      { name: "description", content: "Amazon storefront with Relay second-life built in." },
     ],
   }),
   component: AmazonHome,
 });
 
-function brandOf(p: { metadata?: Record<string, unknown> | null; vertical: string }) {
-  return (p.metadata as { brand?: string } | null | undefined)?.brand ?? p.vertical;
-}
-
 function AmazonHome() {
   const trigger = useSmileNavigate();
   const persona = useRelay((s) => s.persona);
-  const { data: products = [] } = useQuery({
+  const { data: products = [], isPending } = useQuery({
     queryKey: ["products"],
     queryFn: () => getProducts([]),
   });
-  const grid = products.slice(0, 4);
-  const recommended = products.slice(0, 8);
+  const ordered = [...products].sort(
+    (a, b) => Number(b.sku === "FAS-SN-699") - Number(a.sku === "FAS-SN-699"),
+  );
+  const hero = ordered[0];
+  const categoryCards = [
+    ordered.find((product) => product.sku === "FAS-SN-699"),
+    ordered.find((product) => product.sku === "FAS-TS-001"),
+    ordered.find((product) => product.sku === "ELE-HP-001"),
+    ordered.find((product) => product.sku === "ELE-SW-001"),
+  ].filter((product): product is (typeof ordered)[number] => Boolean(product));
+  const recommended = ordered.slice(0, 10);
 
-  // Seller persona's Layer-1 home IS Seller Central, not the buyer storefront.
   if (persona === "seller") return <Navigate to="/amazon/seller" replace />;
 
   return (
-    <div className="mx-auto max-w-[1320px] px-4 py-6 space-y-6">
-      {/* hero strip with category cards (Amazon-home style) */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {grid.map((p, i) => (
-          <Link
-            key={p.id}
-            to="/amazon/products/$id"
-            params={{ id: p.id }}
-            className="card-soft p-4 block hover:-translate-y-0.5 transition"
-          >
-            <div className="text-base font-medium leading-tight">
-              {i === 0
-                ? "Top picks for you"
-                : i === 1
-                  ? "Refresh your wardrobe"
-                  : i === 2
-                    ? "Tech we'd buy"
-                    : "Daily essentials"}
-            </div>
-            <div className="mt-3 aspect-[4/3] rounded-lg overflow-hidden bg-secondary">
-              <img
-                src={productImage(p.image_url, p.category, p.vertical)}
-                alt=""
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
-            </div>
-            <div className="mt-3 text-xs text-primary inline-flex items-center gap-1">
-              Shop now <ChevronRight className="size-3" />
-            </div>
-          </Link>
-        ))}
-      </div>
-
-      {/* Relay cross-sell banner — primary smile-transition entry */}
-      <motion.button
-        onClick={() => trigger("/")}
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        whileHover={{ scale: 1.005 }}
-        className="w-full text-left card-soft p-6 relative overflow-hidden flex items-center gap-6"
-        style={{
-          background:
-            "linear-gradient(110deg, var(--color-card) 60%, color-mix(in oklab, var(--color-card) 70%, #0F6B4F))",
-        }}
-      >
-        <div
-          className="size-16 rounded-2xl flex items-center justify-center"
-          style={{ background: "color-mix(in oklab, #0F6B4F 16%, transparent)" }}
+    <div className="min-h-full bg-[#e3e6e6] pb-10 text-[#0f1111]">
+      <div className="mx-auto max-w-[1500px]">
+        <section
+          className="relative h-[330px] overflow-hidden bg-[#dce8ef] sm:h-[390px]"
+          style={
+            hero
+              ? {
+                  backgroundImage: `url(${productImage(hero.image_url, hero.category, hero.vertical)})`,
+                  backgroundPosition: "center right",
+                  backgroundRepeat: "no-repeat",
+                  backgroundSize: "cover",
+                }
+              : undefined
+          }
         >
-          <SmileLogo size={56} color="#0F6B4F" />
-        </div>
-        <div className="flex-1">
-          <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-            Inside Amazon
+          <div className="absolute inset-y-0 left-0 w-full bg-[rgba(239,246,249,.92)] sm:w-[58%]" />
+          <div className="relative max-w-[620px] px-6 pt-14 sm:px-12 sm:pt-20">
+            <div className="text-sm font-semibold text-[#565959]">AMAZON FASHION</div>
+            <h1 className="mt-2 max-w-lg text-3xl font-bold leading-tight sm:text-5xl">
+              Everyday shoes, everyday prices
+            </h1>
+            <p className="mt-3 max-w-md text-base text-[#3b4145]">
+              Step into comfort with new-season footwear, easy returns, and doorstep delivery.
+            </p>
+            {hero && (
+              <Link
+                to="/amazon/products/$id"
+                params={{ id: hero.id }}
+                className="mt-5 inline-flex items-center gap-1 rounded-full bg-[#ffd814] px-5 py-2.5 text-sm font-semibold shadow-sm hover:bg-[#f7ca00]"
+              >
+                Shop now <ChevronRight className="size-4" />
+              </Link>
+            )}
           </div>
-          <div className="font-display text-2xl mt-1">Relay — every product's second life</div>
-          <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            Returned items, condition-passported and routed to a buyer near you — before they reach
-            a warehouse. Save up to 60% on verified pieces.
-          </p>
-        </div>
-        <div className="hidden sm:flex items-center gap-2 text-sm font-medium text-primary">
-          Open Relay <ChevronRight className="size-4" />
-        </div>
-      </motion.button>
+        </section>
 
-      {/* Recommended grid */}
-      <section>
-        <div className="flex items-end justify-between mb-3">
-          <h2 className="font-display text-xl">Recommended for you</h2>
-          <Link to="/amazon" className="text-xs text-primary hover:underline">
-            See more
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {recommended.map((p) => (
-            <Link
-              key={p.id}
-              to="/amazon/products/$id"
-              params={{ id: p.id }}
-              className="card-soft p-3 hover:-translate-y-0.5 transition"
-            >
-              <div className="aspect-square rounded-lg overflow-hidden bg-secondary">
-                <img
-                  src={productImage(p.image_url, p.category, p.vertical)}
-                  alt={p.title}
-                  loading="lazy"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="text-sm mt-2 line-clamp-2">
-                {brandOf(p)} {p.title}
-              </div>
-              <div className="flex items-center gap-1 text-[11px] mt-1 text-muted-foreground">
-                <Star className="size-3 fill-[#FFA41C] text-[#FFA41C]" /> 4.
-                {(p.id.charCodeAt(0) % 5) + 3} · 1,2{p.id.charCodeAt(1) % 9}k
-              </div>
-              <div className="font-display text-base tabular mt-1">
-                ₹{p.price.toLocaleString("en-IN")}
-              </div>
-              <div className="text-[10px] text-primary mt-1 inline-flex items-center gap-1">
-                <ShieldCheck className="size-3" /> Eligible for return
-              </div>
-            </Link>
+        <div className="relative z-10 -mt-4 grid grid-cols-1 gap-5 px-4 sm:grid-cols-2 lg:grid-cols-4">
+          {categoryCards.map((p, index) => (
+            <section key={p.id} className="bg-white p-5 shadow-sm">
+              <h2 className="min-h-14 text-xl font-bold leading-tight">
+                {index === 0
+                  ? "Great prices on shoes"
+                  : index === 1
+                    ? "Refresh your wardrobe"
+                    : index === 2
+                      ? "Headphones for every moment"
+                      : "Smart watches and wearables"}
+              </h2>
+              <Link to="/amazon/products/$id" params={{ id: p.id }} className="mt-2 block">
+                <div className="aspect-square overflow-hidden bg-[#f7f7f7]">
+                  <img
+                    src={productImage(p.image_url, p.category, p.vertical)}
+                    alt={p.title}
+                    className="h-full w-full object-contain p-2"
+                  />
+                </div>
+                <div className="mt-4 text-[13px] text-[#007185] hover:text-[#c7511f] hover:underline">
+                  See more
+                </div>
+              </Link>
+            </section>
           ))}
         </div>
-        {products.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-12">
-            No products loaded yet — check that relay-api is running.
+
+        <section className="mx-4 mt-5 bg-white px-5 py-6 shadow-sm">
+          <div className="mb-4 flex items-baseline gap-3">
+            <h2 className="text-xl font-bold sm:text-2xl">Inspired by your shopping trends</h2>
+            <span className="hidden text-sm text-[#007185] sm:inline">See more</span>
+          </div>
+          <div className="flex gap-5 overflow-x-auto pb-2">
+            {recommended.map((p) => (
+              <Link
+                key={p.id}
+                to="/amazon/products/$id"
+                params={{ id: p.id }}
+                className="w-[180px] shrink-0 sm:w-[210px]"
+              >
+                <div className="aspect-square bg-[#f7f7f7]">
+                  <img
+                    src={productImage(p.image_url, p.category, p.vertical)}
+                    alt={p.title}
+                    loading="lazy"
+                    className="h-full w-full object-contain p-3"
+                  />
+                </div>
+                <div className="mt-2 line-clamp-2 text-sm leading-snug hover:text-[#c7511f]">
+                  {p.title}
+                </div>
+                <div className="mt-1 flex items-center gap-1 text-xs text-[#007185]">
+                  <span className="text-[#de7921]">4.4</span>
+                  <Star className="size-3 fill-[#de7921] text-[#de7921]" /> 1,284
+                </div>
+                <div className="mt-1 text-lg">
+                  <sup className="text-xs">₹</sup>
+                  {p.price.toLocaleString("en-IN")}
+                </div>
+                <div className="text-xs">FREE delivery tomorrow</div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <button
+          type="button"
+          onClick={() => trigger("/")}
+          className="mx-4 mt-5 flex w-[calc(100%-2rem)] items-center gap-5 bg-white p-5 text-left shadow-sm hover:outline hover:outline-2 hover:outline-[#2a7f62]"
+        >
+          <div className="flex size-14 shrink-0 items-center justify-center bg-[#e7f4ef]">
+            <SmileLogo size={46} color="#0f6b4f" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-xs font-bold uppercase text-[#0f6b4f]">Inside Amazon</div>
+            <div className="text-xl font-bold">Shop returned products with a verified history</div>
+            <div className="mt-1 text-sm text-[#565959]">
+              Relay gives every returned product a Condition Passport before it finds its next
+              owner.
+            </div>
+          </div>
+          <ShieldCheck className="hidden size-8 text-[#0f6b4f] sm:block" />
+        </button>
+
+        {isPending && (
+          <p className="py-16 text-center text-sm text-[#565959]">Loading today's deals...</p>
+        )}
+        {!isPending && products.length === 0 && (
+          <p className="py-16 text-center text-sm text-[#565959]">
+            No products are available right now.
           </p>
         )}
-      </section>
+      </div>
     </div>
   );
 }

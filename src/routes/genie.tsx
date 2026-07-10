@@ -1,14 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Plus,
-  Sparkles,
-  ArrowRight,
-  X,
-  Wand2,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
+import { Plus, Sparkles, ArrowRight, X, Wand2, ChevronDown, ChevronUp } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteWish, getWishes, getWishMatches, postWish } from "@/lib/relay-api";
@@ -41,6 +33,9 @@ function GeniePage() {
   const { data: matches = [] } = useQuery({
     queryKey: ["wish-matches", userId],
     queryFn: () => getWishMatches([]),
+    refetchInterval: 3_000,
+    refetchIntervalInBackground: true,
+    staleTime: 0,
   });
 
   // Backend is the source of truth for "Your wishes"; local optimistic wishes are merged on top.
@@ -101,6 +96,13 @@ function GeniePage() {
         We'll notify you the moment a returned item matches - local first, then nationally via
         Certified Second-Life.
       </p>
+      <div className="mt-3 inline-flex items-center gap-2 text-xs text-primary">
+        <span className="relative flex size-2">
+          <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-50" />
+          <span className="relative inline-flex size-2 rounded-full bg-primary" />
+        </span>
+        Live matching is active
+      </div>
 
       <div className="card-soft p-5 mt-8">
         <div className="grid sm:grid-cols-[1fr_100px_140px_auto] gap-3">
